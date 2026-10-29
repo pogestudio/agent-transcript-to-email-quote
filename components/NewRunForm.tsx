@@ -5,18 +5,16 @@ import { useRouter } from "next/navigation";
 
 type Props = {
   transcripts: { name: string; text: string }[];
-  fakeRuns: { id: string; transcript: string }[];
 };
 
-const FAKE_RUN_MS = 900;
-
-export default function NewRunForm({ transcripts, fakeRuns }: Props) {
+export default function NewRunForm({ transcripts }: Props) {
   const router = useRouter();
   const [selected, setSelected] = useState("");
   const [transcript, setTranscript] = useState("");
   const [customer, setCustomer] = useState("");
   const [fxFail, setFxFail] = useState(false);
   const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function pick(name: string) {
     setSelected(name);
@@ -29,12 +27,23 @@ export default function NewRunForm({ transcripts, fakeRuns }: Props) {
     setTranscript(await file.text());
   }
 
-  // Fake until POST /api/run exists: open the canned run for this transcript, or the newest one.
-  function run(event: React.FormEvent) {
+  async function run(event: React.FormEvent) {
     event.preventDefault();
     setRunning(true);
-    const match = fakeRuns.find((r) => r.transcript.trim() === transcript.trim()) ?? fakeRuns[0];
-    setTimeout(() => router.push(`/runs/${match.id}`), FAKE_RUN_MS);
+    setError(null);
+    try {
+      const res = await fetch("/api/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transcript, customer, fxFail }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? `Run failed (${res.status})`);
+      router.push(`/runs/${body.id}`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+      setRunning(false);
+    }
   }
 
   return (
@@ -82,6 +91,7 @@ export default function NewRunForm({ transcripts, fakeRuns }: Props) {
           </button>
         </div>
       </div>
+      {error && <p className="form-error">{error}</p>}
     </form>
   );
 }
