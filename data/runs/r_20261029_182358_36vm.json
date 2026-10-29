@@ -1,0 +1,66 @@
+{
+  "id": "r_20261029_182358_36vm",
+  "createdAt": "2026-10-29T18:24:03.862Z",
+  "transcript": "SA: Kvarn Kaffe, det är Sara.\nC: Hej Sara, Karim from Bistro Lyktan in Örebro.\nSA: Hi Karim! What can I do for you?\nC: The House Espresso, twenty kilo please.\nSA: Twenty kilo House Espresso.\nC: We hired a new barista, Tove. She's very good, but she pulls a lot of test shots. A lot.\nSA: Ha, the good ones do.\nC: So, eh, add another fifteen to the espresso. Femton more.\nSA: Fifteen more on the espresso, okay.\nC: Yes. Better too much than running out before Christmas.\nSA: True. Anything else?\nC: No, that's all. Only the espresso.\nSA: I'll send the quote over.\nC: Tack, hej då!\n",
+  "customer": "Bistro Lyktan",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v2",
+  "batch": "b_20261029_182309_grnb",
+  "caseId": "TC12",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Bistro Lyktan",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "kg": 35,
+        "evidence": "The House Espresso, twenty kilo please. ... add another fifteen to the espresso. Femton more."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "name": "House Espresso",
+        "kg": 35,
+        "unitPriceSek": 240,
+        "lineSek": 8400,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 35,
+    "subtotalSek": 8400,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 8400,
+    "deliverySek": 0,
+    "totalExclVatSek": 8400,
+    "vatSek": 2100,
+    "totalInclVatSek": 10500,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "All pricing rules met"
+  ],
+  "questions": [],
+  "email": "Hi Bistro Lyktan,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n35 kg House Espresso: 8 400 SEK\nDelivery: free\nTotal excl. VAT: 8 400 SEK\nVAT 25%: 2 100 SEK\nTotal incl. VAT: 10 500 SEK\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 5619,
+    "outputTokens": 285,
+    "costUsd": 0.014088,
+    "ms": 4998
+  }
+}

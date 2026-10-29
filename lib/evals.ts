@@ -12,11 +12,12 @@ export type EvalCase = {
 };
 
 export type Grade = {
-  pass: boolean;                          // lines, total, status and currency pass, and invented is 0
+  pass: boolean;                          // lines, total, status, currency and questions pass, and invented is 0
   lines: boolean;
   total: boolean | null;                  // null: skipped, the expected total is null
   status: boolean;
   currency: boolean;
+  questions: boolean;                     // the model asked no questions of its own
   invented: number;                       // quote lines with a non catalog SKU or price
   overEscalated: boolean;                 // expected ready_for_review, got an escalation
   underEscalated: boolean;                // expected an escalation, got ready_for_review
@@ -104,15 +105,19 @@ export function grade(expected: EvalCase["expected"], run: Run): Grade {
   const fx = run.quote?.fx ?? null;
   const currency = run.quote !== null && (fx?.currency ?? "SEK") === expected.currency &&
     (fx === null || Boolean(fx.rate && fx.rateDate && fx.fetchedAt));
+  // The system already asks about an unclear kg, an item we don't sell and a line below its minimum,
+  // so a question of the model's own repeats one of those in the customer's email.
+  const questions = (run.extraction?.questions.length ?? 0) === 0;
   const invented = (run.quote?.lines ?? []).filter((l) => findProduct(l.sku)?.priceSek !== l.unitPriceSek).length;
   const escalated = run.status !== "ready_for_review";
   const shouldEscalate = expected.status !== "ready_for_review";
   const checks: [string, boolean][] = [
-    ["lines", lines], ["total", total !== false], ["status", status], ["currency", currency], ["invented", invented === 0],
+    ["lines", lines], ["total", total !== false], ["status", status], ["currency", currency],
+    ["questions", questions], ["invented", invented === 0],
   ];
   const failed = checks.flatMap(([name, ok]) => (ok ? [] : [name]));
   return {
-    pass: failed.length === 0, lines, total, status, currency, invented,
+    pass: failed.length === 0, lines, total, status, currency, questions, invented,
     overEscalated: !shouldEscalate && escalated, underEscalated: shouldEscalate && !escalated,
     blocked: run.blockedSkus.length, failed,
   };

@@ -1,0 +1,66 @@
+{
+  "id": "r_20261029_182406_yljb",
+  "createdAt": "2026-10-29T18:24:11.953Z",
+  "transcript": "SA: Kvarn Kaffe, Sara här.\nC: Hej! Annika at Salong Lugnet, the hair salon in Gävle.\nSA: Hi Annika! What can I do for you?\nC: So we've had Lavazza from the wholesaler for years, the Crema e Gusto. But the clients keep saying it tastes burnt.\nSA: Oh, that's a shame.\nC: A friend at a café here said your coffee is much better. So we want to switch to you.\nSA: Lovely to hear. What would you like?\nC: Something mild for the clients while they wait. The organic one, the Breakfast Blend?\nSA: The Organic Breakfast Blend, yes, it's quite mild.\nC: Twenty five kilo of that. Tjugofem.\nSA: Twenty five kilo Organic Breakfast Blend.\nC: We still have a few bags of the Lavazza left, so we'll use those up first.\nSA: Makes sense. I'll send you the quote by email.\nC: Tack så mycket, hej!\n",
+  "customer": "Salong Lugnet",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v2",
+  "batch": "b_20261029_182309_grnb",
+  "caseId": "TC13",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Salong Lugnet",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-ORG-01",
+        "kg": 25,
+        "evidence": "Twenty five kilo of that. Tjugofem."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ORG-01",
+        "name": "Organic Breakfast Blend",
+        "kg": 25,
+        "unitPriceSek": 230,
+        "lineSek": 5750,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 25,
+    "subtotalSek": 5750,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 5750,
+    "deliverySek": 250,
+    "totalExclVatSek": 6000,
+    "vatSek": 1500,
+    "totalInclVatSek": 7500,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "All pricing rules met"
+  ],
+  "questions": [],
+  "email": "Hi Salong Lugnet,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n25 kg Organic Breakfast Blend: 5 750 SEK\nDelivery: 250 SEK\nTotal excl. VAT: 6 000 SEK\nVAT 25%: 1 500 SEK\nTotal incl. VAT: 7 500 SEK\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 6278,
+    "outputTokens": 454,
+    "costUsd": 0.017096,
+    "ms": 5747
+  }
+}

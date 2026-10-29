@@ -1,0 +1,14 @@
+SA: Kvarn Kaffe, Sara här.
+C: Hej! Annika at Salong Lugnet, the hair salon in Gävle.
+SA: Hi Annika! What can I do for you?
+C: So we've had Lavazza from the wholesaler for years, the Crema e Gusto. But the clients keep saying it tastes burnt.
+SA: Oh, that's a shame.
+C: A friend at a café here said your coffee is much better. So we want to switch to you.
+SA: Lovely to hear. What would you like?
+C: Something mild for the clients while they wait. The organic one, the Breakfast Blend?
+SA: The Organic Breakfast Blend, yes, it's quite mild.
+C: Twenty five kilo of that. Tjugofem.
+SA: Twenty five kilo Organic Breakfast Blend.
+C: We still have a few bags of the Lavazza left, so we'll use those up first.
+SA: Makes sense. I'll send you the quote by email.
+C: Tack så mycket, hej!

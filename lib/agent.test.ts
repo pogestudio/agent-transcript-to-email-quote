@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { API_KEY_VAR, MAX_STEPS, parseExtraction, runAgent } from "./agent";
+import { activePromptVersion, API_KEY_VAR, MAX_STEPS, parseExtraction, runAgent } from "./agent";
 import { addMemory } from "./memory";
 import { readJson, readJsonl } from "./store";
 import type { Run, TraceEvent } from "./types";
@@ -87,7 +87,8 @@ describe("runAgent", () => {
       .mockResolvedValueOnce(answer(JSON_TEXT));
     const run = await runAgent(input);
 
-    expect(run).toMatchObject({ status: "ready_for_review", error: null, promptVersion: "v1", source: "ui" });
+    // A UI run without a version uses the active prompt, whichever one was promoted.
+    expect(run).toMatchObject({ status: "ready_for_review", error: null, promptVersion: activePromptVersion(), source: "ui" });
     expect(run.quote?.totalExclVatSek).toBe(5050);
     expect(run.totals).toMatchObject({ steps: 3, inputTokens: 3000, outputTokens: 300, costUsd: 0.009 });
     expect(readJson<Run>(`runs/${run.id}.json`)).toEqual(run);

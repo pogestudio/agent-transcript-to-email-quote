@@ -190,5 +190,59 @@
       "status": "needs_info",
       "currency": "SEK"
     }
+  },
+  {
+    "id": "TC11",
+    "transcript": "tc11.txt",
+    "customer": "Studio Norrsken",
+    "fxFail": false,
+    "scenario": "Two changes of mind: Morning Filter, then the decaf, then back to Morning Filter at 45 kg",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-FIL-01",
+          "kg": 45
+        }
+      ],
+      "totalExclVatSek": 9450,
+      "status": "ready_for_review",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC12",
+    "transcript": "tc12.txt",
+    "customer": "Bistro Lyktan",
+    "fxFail": false,
+    "scenario": "Quantity added to: 20 kg House Espresso, then \"add another fifteen\"",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ESP-01",
+          "kg": 35
+        }
+      ],
+      "totalExclVatSek": 8400,
+      "status": "ready_for_review",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC13",
+    "transcript": "tc13.txt",
+    "customer": "Salong Lugnet",
+    "fxFail": false,
+    "scenario": "Mentions a competitor brand (Lavazza) it is switching away from, orders 25 kg Organic",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ORG-01",
+          "kg": 25
+        }
+      ],
+      "totalExclVatSek": 6000,
+      "status": "ready_for_review",
+      "currency": "SEK"
+    }
   }
 ]

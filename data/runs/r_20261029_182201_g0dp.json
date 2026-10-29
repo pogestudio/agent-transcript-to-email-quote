@@ -1,0 +1,66 @@
+{
+  "id": "r_20261029_182201_g0dp",
+  "createdAt": "2026-10-29T18:22:05.780Z",
+  "transcript": "SA: Kvarn Kaffe, Sara här.\nC: Hej Sara, Johan at Kontorsbolaget. Eh, we need coffee for the office again.\nSA: Of course. Still out in Västerås?\nC: Still in Västerås, ja. Same address by the station.\nSA: Great. What are you thinking?\nC: Forty kilo of the morning one... the Morning Filter.\nSA: Forty kilo Morning Filter, noted.\nC: Actually wait. Half the office went decaf after the summer. Take the Colombian decaf instead. And make it sixty.\nSA: Sixty kilo decaf instead of the Morning Filter?\nC: Instead, yes. Just the decaf.\nSA: Got it.\nC: People said they couldn't sleep. I think it's the deadlines, not the coffee, but okay.\nSA: Ha, could be both. I'll email you the quote.\nC: Tack, hej!\n",
+  "customer": "Kontorsbolaget",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_182138_dvhy",
+  "caseId": "TC06",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Kontorsbolaget",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-FIL-02",
+        "kg": 60,
+        "evidence": "Take the Colombian decaf instead. And make it sixty."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-FIL-02",
+        "name": "Colombia Decaf Filter",
+        "kg": 60,
+        "unitPriceSek": 260,
+        "lineSek": 15600,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 60,
+    "subtotalSek": 15600,
+    "discountPct": 5,
+    "discountSek": 780,
+    "goodsAfterDiscountSek": 14820,
+    "deliverySek": 0,
+    "totalExclVatSek": 14820,
+    "vatSek": 3705,
+    "totalInclVatSek": 18525,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "All pricing rules met"
+  ],
+  "questions": [],
+  "email": "Hi Kontorsbolaget,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n60 kg Colombia Decaf Filter: 15 600 SEK\nVolume discount (5%): 780 SEK off\nDelivery: free\nTotal excl. VAT: 14 820 SEK\nVAT 25%: 3 705 SEK\nTotal incl. VAT: 18 525 SEK\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 6034,
+    "outputTokens": 300,
+    "costUsd": 0.015068,
+    "ms": 4464
+  }
+}

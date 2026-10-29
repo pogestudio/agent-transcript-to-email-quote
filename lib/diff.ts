@@ -6,7 +6,7 @@ export type Change = { field: string; before: string; after: string };
 const NONE = "none";
 
 // The lines the quote was built from, an unclear quantity as "? kg".
-const linesText = (run: Run) => {
+export const linesText = (run: Run) => {
   const lines = (run.extraction?.lines ?? []).filter((l) => !run.blockedSkus.includes(l.sku));
   return lines.length ? lines.map((l) => `${l.kg ?? "?"} kg ${l.sku}`).join(", ") : NONE;
 };

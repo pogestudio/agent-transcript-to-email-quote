@@ -1,0 +1,66 @@
+{
+  "id": "r_20261029_182212_30yi",
+  "createdAt": "2026-10-29T18:22:16.422Z",
+  "transcript": "SA: Kvarn Kaffe, hej.\nC: Hallo, Jonas here from Kaffeehaus Mitte in Berlin.\nSA: Hi Jonas! How's Berlin?\nC: Grey, cold. Perfect coffee weather.\nSA: Ha. What can I get you?\nC: The organic one, the Breakfast Blend. Thirty kilo.\nSA: Thirty kilo of the Organic Breakfast Blend.\nC: Exactly thirty, ja. I read that delivery is free from thirty, right?\nSA: That's right.\nC: Good. And please make the quote in euros, it's easier for our bookkeeping.\nSA: Will do.\nC: Danke, bye!\n",
+  "customer": "Kaffeehaus Mitte",
+  "fxFail": true,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_182138_dvhy",
+  "caseId": "TC08",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Kaffeehaus Mitte",
+    "currency": "EUR",
+    "lines": [
+      {
+        "sku": "KV-ORG-01",
+        "kg": 30,
+        "evidence": "The organic one, the Breakfast Blend. Thirty kilo."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ORG-01",
+        "name": "Organic Breakfast Blend",
+        "kg": 30,
+        "unitPriceSek": 230,
+        "lineSek": 6900,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 30,
+    "subtotalSek": 6900,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 6900,
+    "deliverySek": 0,
+    "totalExclVatSek": 6900,
+    "vatSek": 1725,
+    "totalInclVatSek": 8625,
+    "fx": null,
+    "fxError": "Exchange rate lookup failed (simulated)"
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "Exchange rate lookup failed; quote kept in SEK"
+  ],
+  "questions": [],
+  "email": "Hi Kaffeehaus Mitte,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n30 kg Organic Breakfast Blend: 6 900 SEK\nDelivery: free\nTotal excl. VAT: 6 900 SEK\nVAT 25%: 1 725 SEK\nTotal incl. VAT: 8 625 SEK\n\nPrices are in SEK because today's exchange rate couldn't be fetched.\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 5870,
+    "outputTokens": 336,
+    "costUsd": 0.0151,
+    "ms": 4301
+  }
+}

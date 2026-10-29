@@ -1,0 +1,86 @@
+{
+  "id": "r_20261029_182220_yq8y",
+  "createdAt": "2026-10-29T18:22:25.684Z",
+  "transcript": "SA: Kvarn Kaffe, hej!\nC: Hej hej, Maja here, from Glassbaren Ven. The ice cream bar out on Ven, the island.\nSA: Oh nice, I've been there! By the harbour in Bäckviken?\nC: That's us. We're open all year now, believe it or not. Winter ice cream is a thing.\nSA: Ha, brave. What can I get you?\nC: The House Espresso, for the affogato. Twenty five kilo.\nSA: Twenty five kilo House Espresso.\nC: And, eh, we want to try a cold coffee drink with the ice cream. Your cold brew one?\nSA: The Cold Brew Blend, yes.\nC: Just eight kilo of that, to try. If people like it we'll order more in the spring.\nSA: Eight kilo Cold Brew Blend.\nC: The ferry is the tricky part, but the delivery usually works out.\nSA: It does. I'll send you the quote.\nC: Tack!\n",
+  "customer": "Glassbaren Ven",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_182138_dvhy",
+  "caseId": "TC10",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Glassbaren Ven",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "kg": 25,
+        "evidence": "The House Espresso, for the affogato. Twenty five kilo."
+      },
+      {
+        "sku": "KV-CLD-01",
+        "kg": 8,
+        "evidence": "Just eight kilo of that, to try."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [
+      "The minimum order for Cold Brew Blend is 10 kg, and you asked for 8 kg. Would you like to increase it to 10 kg, or skip the Cold Brew Blend for now?"
+    ],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "name": "House Espresso",
+        "kg": 25,
+        "unitPriceSek": 240,
+        "lineSek": 6000,
+        "minKg": 5,
+        "belowMin": false
+      },
+      {
+        "sku": "KV-CLD-01",
+        "name": "Cold Brew Blend",
+        "kg": 8,
+        "unitPriceSek": 220,
+        "lineSek": 1760,
+        "minKg": 10,
+        "belowMin": true
+      }
+    ],
+    "totalKg": 33,
+    "subtotalSek": 7760,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 7760,
+    "deliverySek": 0,
+    "totalExclVatSek": 7760,
+    "vatSek": 1940,
+    "totalInclVatSek": 9700,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "needs_info",
+  "reasons": [
+    "Cold Brew Blend: 8 kg is below the 10 kg minimum",
+    "The agent has open questions"
+  ],
+  "questions": [
+    "The minimum for Cold Brew Blend is 10 kg. Would that work?",
+    "The minimum order for Cold Brew Blend is 10 kg, and you asked for 8 kg. Would you like to increase it to 10 kg, or skip the Cold Brew Blend for now?"
+  ],
+  "email": "Hi Glassbaren Ven,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n25 kg House Espresso: 6 000 SEK\n8 kg Cold Brew Blend: 1 760 SEK\nDelivery: free\nTotal excl. VAT: 7 760 SEK\nVAT 25%: 1 940 SEK\nTotal incl. VAT: 9 700 SEK\n\nBefore we can finalise the quote:\n1. The minimum for Cold Brew Blend is 10 kg. Would that work?\n2. The minimum order for Cold Brew Blend is 10 kg, and you asked for 8 kg. Would you like to increase it to 10 kg, or skip the Cold Brew Blend for now?\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 6301,
+    "outputTokens": 574,
+    "costUsd": 0.018342,
+    "ms": 5618
+  }
+}

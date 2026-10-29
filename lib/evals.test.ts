@@ -29,7 +29,7 @@ const TC07: EvalCase["expected"] = { lines: [{ sku: "KV-FIL-01", kg: 40 }, { sku
 describe("grade", () => {
   it("passes a perfect run", () => {
     expect(grade(TC01, run(extraction({ lines: [line("KV-ESP-01", 20)] })))).toEqual({
-      pass: true, lines: true, total: true, status: true, currency: true, invented: 0,
+      pass: true, lines: true, total: true, status: true, currency: true, questions: true, invented: 0,
       overEscalated: false, underEscalated: false, blocked: 0, failed: [],
     });
   });
@@ -57,6 +57,16 @@ describe("grade", () => {
     expect(grade(TC07, run(extraction({ lines, currency: "EUR" }), EUR))).toMatchObject({ pass: true, currency: true });
   });
 
+  it("fails questions when the model repeats the minimum question the system already asks", () => {
+    const TC10: EvalCase["expected"] = { lines: [{ sku: "KV-ESP-01", kg: 25 }, { sku: "KV-CLD-01", kg: 8 }],
+      totalExclVatSek: 7760, status: "needs_info", currency: "SEK" };
+    const lines = [line("KV-ESP-01", 25), line("KV-CLD-01", 8)];
+    const asked = extraction({ lines, questions: ["The minimum for Cold Brew Blend is 10 kg. Would you like 10 kg?"] });
+    // needs_info either way, so only the questions check sees it.
+    expect(grade(TC10, run(asked))).toMatchObject({ pass: false, status: true, questions: false, failed: ["questions"] });
+    expect(grade(TC10, run(extraction({ lines })))).toMatchObject({ pass: true, questions: true });
+  });
+
   it.each([
     ["a non catalog SKU", { sku: "KV-KEN-01" }],
     ["a price that differs from the catalog", { unitPriceSek: 100 }],
@@ -70,7 +80,7 @@ describe("grade", () => {
 describe("summarize", () => {
   const result = (caseId: string, pass: boolean, costUsd: number, ms: number): EvalResult => ({
     caseId, runId: `r_${caseId}_${ms}`, costUsd, ms, pass, lines: pass, total: pass, status: true, currency: true,
-    invented: 0, overEscalated: false, underEscalated: false, blocked: 0, failed: pass ? [] : ["lines", "total"],
+    questions: true, invented: 0, overEscalated: false, underEscalated: false, blocked: 0, failed: pass ? [] : ["lines", "total"],
   });
 
   it("counts pass^k only for cases where all k runs passed, with cost and latency ranges", () => {

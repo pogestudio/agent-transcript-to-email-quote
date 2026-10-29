@@ -1,0 +1,66 @@
+{
+  "id": "r_20261029_182354_m1z2",
+  "createdAt": "2026-10-29T18:23:59.960Z",
+  "transcript": "SA: Kvarn Kaffe, Sara här.\nC: Hej Sara, it's Elin at Studio Norrsken, up in Umeå.\nSA: Hi Elin! Is it cold up there yet?\nC: Snow last week already. Anyway, coffee. Forty kilo of the Morning Filter, like last time.\nSA: Forty kilo Morning Filter.\nC: Hmm, wait. A few people asked for decaf. Maybe the Colombian decaf instead?\nSA: The decaf instead of the Morning Filter?\nC: Ja... no. No, you know what, forget the decaf, they can drink tea. Back to the Morning Filter.\nSA: Okay, Morning Filter after all. Still forty?\nC: Make it forty five. We have two new people starting in November.\nSA: Forty five, noted.\nC: Sorry for the back and forth, it's been one of those days. The printer is on fire, almost literally.\nSA: Ha, no problem at all. I'll email you the quote.\nC: Tack, hej!\n",
+  "customer": "Studio Norrsken",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v2",
+  "batch": "b_20261029_182309_grnb",
+  "caseId": "TC11",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Studio Norrsken",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-FIL-01",
+        "kg": 45,
+        "evidence": "Make it forty five. We have two new people starting in November."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-FIL-01",
+        "name": "Morning Filter",
+        "kg": 45,
+        "unitPriceSek": 210,
+        "lineSek": 9450,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 45,
+    "subtotalSek": 9450,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 9450,
+    "deliverySek": 0,
+    "totalExclVatSek": 9450,
+    "vatSek": 2362.5,
+    "totalInclVatSek": 11812.5,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "All pricing rules met"
+  ],
+  "questions": [],
+  "email": "Hi Studio Norrsken,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n45 kg Morning Filter: 9 450 SEK\nDelivery: free\nTotal excl. VAT: 9 450 SEK\nVAT 25%: 2 362,50 SEK\nTotal incl. VAT: 11 812,50 SEK\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 6176,
+    "outputTokens": 296,
+    "costUsd": 0.015312,
+    "ms": 4999
+  }
+}

@@ -1145,3 +1145,58 @@ td.r {
 a.mark:hover {
   box-shadow: inset 0 0 0 1.5px currentColor;
 }
+
+/* Eval gate */
+
+.gate-intro {
+  margin: 0 0 12px;
+}
+
+.delta-up {
+  color: var(--ready-fg);
+  font-weight: 700;
+}
+
+.delta-down {
+  color: var(--error-fg);
+  font-weight: 700;
+}
+
+.gate-verdict {
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.gate-pass {
+  background: var(--ready-bg);
+  color: var(--ready-fg);
+}
+
+.gate-block {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+/* Recurring corrections */
+
+h3.label {
+  margin: 0 0 8px;
+}
+
+.correction {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+}
+
+.correction + .correction {
+  border-top: 1px solid var(--border);
+}
+
+.correction .marks {
+  align-items: center;
+  flex-wrap: wrap;
+}

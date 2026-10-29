@@ -1,0 +1,66 @@
+{
+  "id": "r_20261029_182138_wty9",
+  "createdAt": "2026-10-29T18:21:43.390Z",
+  "transcript": "SA: Kvarn Kaffe, det är Sara.\nC: Hej Sara! It's Linnea, from Café Linnea on Södermalm.\nSA: Hi Linnea, how are things?\nC: Busy, busy. The oat milk delivery never showed up this morning, but that's another story.\nSA: Oh no. So what can I do for you today?\nC: Same as usual really. The House Espresso.\nSA: How much do you need?\nC: Twenty kilo. Tjugo. That lasts us about three weeks.\nSA: Twenty kilo of House Espresso, got it.\nC: Yes. And nothing else this time, we still have filter left.\nSA: Perfect. I'll send the quote over by email.\nC: Tack, hej hej!\n",
+  "customer": "Café Linnea",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_182138_dvhy",
+  "caseId": "TC01",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Café Linnea",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "kg": 20,
+        "evidence": "Twenty kilo. Tjugo. That lasts us about three weeks."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "name": "House Espresso",
+        "kg": 20,
+        "unitPriceSek": 240,
+        "lineSek": 4800,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 20,
+    "subtotalSek": 4800,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 4800,
+    "deliverySek": 250,
+    "totalExclVatSek": 5050,
+    "vatSek": 1262.5,
+    "totalInclVatSek": 6312.5,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "All pricing rules met"
+  ],
+  "questions": [],
+  "email": "Hi Café Linnea,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n20 kg House Espresso: 4 800 SEK\nDelivery: 250 SEK\nTotal excl. VAT: 5 050 SEK\nVAT 25%: 1 262,50 SEK\nTotal incl. VAT: 6 312,50 SEK\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 5488,
+    "outputTokens": 251,
+    "costUsd": 0.013486,
+    "ms": 4747
+  }
+}

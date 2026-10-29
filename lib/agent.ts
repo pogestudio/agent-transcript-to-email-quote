@@ -32,6 +32,12 @@ export const listPromptVersions = () =>
     .flatMap((name) => (name.endsWith(".md") && PROMPT_VERSION.test(name.slice(0, -3)) ? [name.slice(0, -3)] : []))
     .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
 
+// Promote: UI runs use this prompt from now on. Only the promote route calls it, after the gate passed.
+export function setActivePromptVersion(version: string): void {
+  if (!listPromptVersions().includes(version)) throw new Error(`Unknown prompt version: ${version}`);
+  fs.writeFileSync(promptFile("active.txt"), `${version}\n`);
+}
+
 export function readPrompt(version: string): string {
   if (!PROMPT_VERSION.test(version)) throw new Error(`Unknown prompt version: ${version}`);
   return fs.readFileSync(promptFile(`${version}.md`), "utf8");

@@ -1,10 +1,10 @@
 # Progress
 
-Oct 29, 2026 · Sessions 1 to 8
+Oct 29, 2026 · Sessions 1 to 9
 
 ## Summary
 
-Phases 1 to 7 are done. The test set is in place: ten transcripts, one per hard case in the brief, with an answer key in `data/expected.json` that a unit test checks against the pricing code. The Run button posts to `POST /api/run`, and the real agent now reads the call: `claude-sonnet-5-5` searches the catalog, checks lines and the exchange rate with the three tools, and returns an Extraction. Code then computes every number, the status and the email with `assemble()`, and every run leaves a trace with each step, tool input and output, tokens, time and cost. All money and status rules are proven by unit tests, and the loop is tested against a fake SDK client. The Evals page runs every case k times through the real agent, grades each run in code and links every result to its run and trace. The v1 baseline at k = 3 passed all 30 runs, so Phase 8 needs a harder case first. The review panel now saves: approve (with changes, or a manager discount), reject with a reason, or rerun with the customer's answers, each appended to `data/feedback.jsonl`. A reviewer can leave a note for the customer, which the agent gets on that customer's next UI run, and every note can be forgotten. The run page shows the memory used, the parent run and reruns, and the changes against the parent, and an approved run can become a new eval case.
+Phases 1 to 8 are done. The test set is in place: ten transcripts, one per hard case in the brief, plus three harder ones from Phase 8, with an answer key in `data/expected.json` that a unit test checks against the pricing code. The Run button posts to `POST /api/run`, and the real agent now reads the call: `claude-sonnet-5-5` searches the catalog, checks lines and the exchange rate with the three tools, and returns an Extraction. Code then computes every number, the status and the email with `assemble()`, and every run leaves a trace with each step, tool input and output, tokens, time and cost. All money and status rules are proven by unit tests, and the loop is tested against a fake SDK client. The Evals page runs every case k times through the real agent, grades each run in code and links every result to its run and trace. The review panel now saves: approve (with changes, or a manager discount), reject with a reason, or rerun with the customer's answers, each appended to `data/feedback.jsonl`. A reviewer can leave a note for the customer, which the agent gets on that customer's next UI run, and every note can be forgotten. The run page shows the memory used, the parent run and reruns, and the changes against the parent, and an approved run can become a new eval case. In Phase 8 the v1 baseline still had no failure, even with three harder cases, so the grader now also checks that the model asks no questions of its own. That made TC10's repeated minimum question visible: v1 fails it in all 3 runs. `prompts/v2.md` adds one rule, v2 passes 39 of 39, and the eval gate on the Evals page passes with TC10 as the target. The user promoted v2, so UI runs now use it. The Recurring corrections panel lists reviewer reasons and approved edits next to the batch's failing runs.
 
 ## What was built
 
@@ -190,6 +190,87 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 
   `review.test.ts` and the agent tests are the two extras the user picked.
 
+### Session 9: Phase 8
+
+**Finding a failure**
+
+- The Phase 6 baseline passed 30 of 30, so, as the plan says, three harder cases were added. Each has one hard thing, and all three expect ready\_for\_review in SEK:
+
+| Case | Customer, city | Hard case as written | Expected |
+| --- | --- | --- | --- |
+| TC11 | Studio Norrsken, Umeå | 40 kg Morning Filter, then "Maybe the Colombian decaf instead?", then "forget the decaf… Back to the Morning Filter… Make it forty five" | KV-FIL-01 45, 9,450 SEK |
+| TC12 | Bistro Lyktan, Örebro | 20 kg House Espresso, then "add another fifteen to the espresso. Femton more"; the SA never adds it up | KV-ESP-01 35, 8,400 SEK |
+| TC13 | Salong Lugnet, Gävle | Has had Lavazza Crema e Gusto from a wholesaler and is switching to Kvarn; orders 25 kg Organic Breakfast Blend | KV-ORG-01 25, 6,000 SEK |
+
+- A v1 batch with all 13 cases passed 39 of 39. Each new case was read the same way in all 3 runs, and Lavazza never reached `notInCatalog`.
+- The only flaw was in a field the grader ignores: TC10 asked its own Cold Brew minimum question in all 3 runs again (6 of 6 over both batches).
+- The user chose to make the grader see it rather than write another round of transcripts. That batch (`b_20261029_181718_k8ga`) was graded without the new check, so it was moved to the scratchpad as a trial batch.
+
+**Build**
+
+- `lib/evals.ts`: `grade` gains a `questions` check, which passes when the model asked no questions of its own. `pass` needs it, and `failed` names it.
+- `lib/gate.ts`:
+  - `compareBatches(baseline, candidate)`: passed runs per case in both batches, and the change.
+  - `gate(baseline, candidate, targets)` → `{ ok, dropped, notImproved, invented, reasons }`. It passes only when:
+    - no case passes fewer runs
+    - every target passes more runs
+    - invented is 0
+    - under escalations don't rise
+
+    It also blocks when there is no target, when a target isn't in the baseline, and when the two batches have a different k.
+  - `loadPair(a, b)`: both batches must exist (404) and be finished (409).
+- `lib/corrections.ts` (new): `loadCorrections()` reads `feedback.jsonl` with each run, newest first. It keeps entries with a reason or an approval that changed the quote, and shows the agent's lines and discount against the approved ones.
+- `lib/agent.ts`: `setActivePromptVersion(v)` writes `prompts/active.txt`, and only for a version that exists. `lib/diff.ts` exports `linesText` for the corrections panel.
+- Routes:
+  - `GET /api/evals/compare?a=&b=&targets=` returns `{ cases, gate }`.
+  - `POST /api/prompts/promote` takes `{ promptVersion, baseline, candidate, targets }` and returns 400 for:
+    - an unknown version
+    - targets that aren't a list
+    - a candidate that ran another version
+
+    Unknown and running batches get 404 and 409 from `loadPair`. It runs the gate again, returns 409 with the reasons when it blocks, and otherwise writes `active.txt` and returns `{ active }`.
+- UI on the Evals page:
+  - **Eval gate** card, for a finished batch when another finished batch exists. It has:
+    - a baseline picker, defaulting to the active prompt's newest batch
+    - a target checkbox per case
+    - baseline and this batch's passed runs, and the change (+3 green, −1 red)
+    - the verdict in one line
+    - "Promote vN", enabled only when the gate passes and vN isn't already active
+  - **Recurring corrections** card: reviewer corrections on the left, the selected batch's failing cases on the right with a ✗ per failed run, linking to the run and listing the failed checks.
+- `prompts/v2.md`: v1 with one rule extended (below).
+- Tests: `gate.test.ts` (the plan's 5) and one `evals.test.ts` test for the `questions` check. The user chose no extras. 189 tests in total, 9 of them from the three new cases in `expected.test.ts`.
+
+**The failure, walked through** (README section 6)
+
+- **Run:** `r_20261029_182220_6z6b`, v1, TC10.
+- **Symptom:** the status is needs\_info, as expected, but the email asks the Cold Brew minimum question twice, and the reasons add "The agent has open questions".
+- **Trace:**
+  - step 1: `search_products` for "House Espresso" and "Cold Brew Blend"
+  - step 2: `price_line` KV-ESP-01 25 kg, then KV-CLD-01 8 kg → `belowMin: true, minKg: 10`
+  - step 3: the final JSON with `questions: ["The minimum order for Cold Brew Blend is 10 kg, and you asked for 8 kg. Would you like to increase it to 10 kg or more?"]`
+- **Root cause: a rule.** Step 2 of the prompt has the model check the minimum. The questions rule tells it to leave a null kg and an item in `notInCatalog` to the system, but says nothing about a quantity below the minimum.
+- **Fix, v2:** "Never ask about a kg you set to null, an item in notInCatalog or a quantity below the product's minimum (the system asks those itself), or about the exchange rate."
+- **Fixed run:** `r_20261029_182347_3dv8`, v2, TC10: one question, "The minimum for Cold Brew Blend is 10 kg. Would that work?", and one reason.
+
+**Before and after** (README section 5)
+
+| Metric | v1 `b_20261029_182138_dvhy` | v2 `b_20261029_182309_grnb` |
+| --- | --- | --- |
+| Runs passed | 36 of 39 | 39 of 39 |
+| pass^k | 12 of 13 cases | 13 of 13 cases |
+| TC10 | 0/3, failed on questions | 3/3 |
+| Every other case | 3/3 | 3/3 |
+| Invented, over, under, blocked | 0, 0, 0, 0 | 0, 0, 0, 0 |
+| Cost per run | $0.0150 mean, $0.0089 to $0.0183 | $0.0150 mean, $0.0090 to $0.0177 |
+| Latency | 4.8 s median, 5.7 s max; 64 s for the batch | 4.4 s median, 7.1 s max; 62 s for the batch |
+
+- **Gate:** v2 against v1 `dvhy` with TC10 as the target passes: TC10 0 → 3, no case dropped, nothing invented, under escalations 0 → 0. The user clicked Promote at 19:35, and `prompts/active.txt` says `v2`.
+- **Variance:**
+  - TC10's own question appeared in 9 of 9 v1 runs over three batches (`w8lu`, `k8ga`, `dvhy`) and in 0 of 3 v2 runs.
+  - No case dropped a run in any of the four batches, so no rerun for variance was needed.
+  - Cost per run stayed within $0.0089 to $0.0183 in every batch.
+- **Ungraded fields, v2:** TC08 kept its FX reason in all 3 runs, TC03 kept "Kenya AA" in `notInCatalog`, and TC04 kept its delivery note.
+
 ## Decisions
 
 1. **Status and stage are separate.** Status is the agent's verdict and the only thing the evals grade. The stage (To review, Needs manager, Waiting on customer, Ready to send, Sent, Rejected, Replaced) is where the run is in its life and is never graded.
@@ -232,11 +313,20 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 38. **Edits and a discount only apply to an approval.** A rerun reads the transcript again with the answers and the customer's memory; a reject saves only the reason and any note.
 39. **The email never mentions the manager's approval.** A needs\_approval draft used to end with "Our sales manager will confirm the quote shortly." The email goes to the customer and that step is internal, so the line was removed after the Phase 7 commit at the user's request. A needs\_approval draft now ends like any other, and approving it without changes keeps the draft email. Only a needs\_info approval gets a new email without changes, because its draft asks questions. Saved runs keep the email they were made with, so the fake TC04 run and the baseline runs still show the old line.
 40. **A quote in another currency shows every amount in that currency.** The email and the quote view used to list every amount in SEK and add only the two converted totals at the end. Rule 7 of the brief says the customer gets the quote in their own currency, so after the user's manual TC08 test every line, the discount, delivery, VAT and both totals are converted with the run's cached rate. The user chose the customer's currency only, without SEK next to it, so SEK only appears in the rate line. Each amount is rounded to the cent on its own, so the lines can be a cent off the total, and the email says so. The pricing, the approval limit and the graded total stay in SEK, so the evals don't change. Saved runs keep the email they were made with; their quote view shows the new layout, since it is drawn from the quote.
+41. **When the baseline has no failure, the grader can be what's missing.** Three harder cases passed 3/3 under v1. So instead of writing calls until the model trips, the user chose to grade the flaw already seen in every TC10 run: the model's own questions. It is an exact check in code. For every current case the right number of model questions is 0, because the system asks about an unclear kg, an item we don't sell and a line below its minimum. A case that really needs a model question would need an expected count, which doesn't exist yet.
+42. **Old batches keep the grades they were given.** A run is graded when it finishes and the grade is saved in the batch. The Phase 6 baseline `w8lu` has no `questions` check and still shows TC10 at 3/3. v2 is compared with `dvhy`, the v1 batch graded with the same checks.
+43. **The three new cases stay, though v1 passes them.** The user's choice: a hard case that passes is evidence too, and it adds 9 runs per suite.
+44. **A gate target must be in the baseline, and both batches need the same k.** Otherwise a new case "improves" from nothing, or 3 of 5 is compared with 3 of 3.
+45. **The gate needs at least one target.** Without one, a prompt with no target and no regressions would pass a check that can't fail. Added during the build and flagged to the user; it is one line to remove.
+46. **Promote is the user's click.** A person promotes prompt changes (Phase 9, "Where a person stays in the loop"). Claude checked that Promote turns on when the gate passes and never clicked it. The promote route runs the gate again, so a stale page can't promote a prompt the gate blocks.
+47. **The corrections panel shows reasons and approved changes, nothing else.** A feedback line with no reason and no edit, such as a plain rerun, is left out. An approval with changes shows the agent's lines and discount against the approved ones. The failing cases next to them are from the batch on screen, so on the v1 baseline they are the baseline's failures.
+48. **Targets are picked by hand.** A ticked case says "this prompt is meant to fix it", and the gate holds the prompt to that. It can see the numbers but not what a change was for. Without targets it could only check that nothing got worse, and a copy of v1 renamed v2 would pass. With one failing case the boxes add a step, so targeting every case that failed in the baseline was offered instead. The user kept the checkboxes.
 
 ## Where a decision is saved
 
 - `data/runs/<id>.json`: `review`, `editedQuote`, `editedEmail` and later `sentAt`.
-- `data/feedback.jsonl`: one line per decision, `{ runId, ...review }`. Phase 8's corrections panel will read it to find corrections that keep coming back.
+- `data/feedback.jsonl`: one line per decision, `{ runId, ...review }`. The Recurring corrections panel on the Evals page reads it.
+- `prompts/active.txt`: the prompt UI runs use. Only Promote writes it, after the gate passed.
 - `data/memory.json`: only a note the reviewer typed in "Remember for this customer". The decision itself never goes there, and notes about prices or discounts are refused.
 - `data/expected.json` and `data/transcripts/fb_<id>.txt`: only when the reviewer clicks Add to eval set.
 
@@ -256,6 +346,13 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
   - The review route returns `{ run, newRunId? }`, and to-eval returns the new case.
   - Memory ids start with `m_`.
   - `diffRuns` names its fields with the labels the table shows ("Total excl. VAT", "Memory used").
+- Session 9, not yet written into `build-plan.md`:
+  - `Grade` gains `questions`, and a run passes only when it passes too. The plan's grade table has no such row.
+  - `gate` also returns `reasons`, and blocks on no target, a target missing from the baseline, or a different k.
+  - `lib/gate.ts` also has `compareBatches` and `loadPair`.
+  - The compare route returns `{ cases, gate }`. Promote takes `{ promptVersion, baseline, candidate, targets }`, returns `{ active }`, or 409 with `{ error, reasons }`.
+  - `lib/corrections.ts` is new (not in the plan's layout). `diff.ts` exports `linesText`, and `agent.ts` gains `setActivePromptVersion`.
+  - `expected.json` has 13 cases.
 
 ## Plan updates in `build-plan.md`
 
@@ -291,6 +388,8 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Session 8, changed: `lib/agent.ts`, `lib/agent.test.ts`, `lib/evals.ts`, `lib/status.ts`, `lib/store.ts`, `app/runs/[id]/page.tsx`, `components/ReviewPanel.tsx`, `components/RunDetail.tsx`, `app/globals.css`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`. No changes to `data/`.
 - Session 8, after the Phase 7 commit: `lib/email.ts`, `lib/email.test.ts`, `lib/review.ts`, `lib/review.test.ts`, `AI-Info/implementation-plans/build-plan.md`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`.
 - Session 8, after the Phase 7 commit, currency: `lib/pricing.ts`, `lib/format.ts`, `lib/email.ts`, `lib/email.test.ts`, `components/QuoteView.tsx`, `AI-Info/implementation-plans/build-plan.md`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`. No changes to `data/`.
+- Session 9, new: `lib/gate.ts`, `lib/gate.test.ts`, `lib/corrections.ts`, `app/api/evals/compare/route.ts`, `app/api/prompts/promote/route.ts`, `components/GateCompare.tsx`, `components/Corrections.tsx`, `prompts/v2.md`, `data/transcripts/tc11.txt`, `tc12.txt`, `tc13.txt`, `data/evals/b_20261029_182138_dvhy.json` (v1) and `b_20261029_182309_grnb.json` (v2) with their 78 runs in `data/runs/` and 78 traces in `data/traces/`.
+- Session 9, changed: `lib/evals.ts`, `lib/evals.test.ts`, `lib/agent.ts`, `lib/diff.ts`, `app/evals/page.tsx`, `app/globals.css`, `data/expected.json`, `prompts/active.txt` (by the user's Promote), `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`.
 
 ## Checks
 
@@ -359,6 +458,42 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
   - **Cleanup:** the 6 runs, 6 traces, `feedback.jsonl`, `memory.json` and the FB01 transcript were moved to the scratchpad, and `expected.json` was restored. `data/` matches its state before the session.
   - **After the Phase 7 commit**, with the manager line removed: `npm test` passes (173 tests) and `tsc --noEmit` passes. The email test checks that a needs\_approval draft says nothing about a manager and ends with "Reply to this email to confirm the order." A manager approval without changes keeps the draft email, and a needs\_info approval without changes drops the questions. No live run: the email is code only.
   - **After the Phase 7 commit**, with every amount in the customer's currency: `npm test` passes (174 tests) and `tsc --noEmit` passes. The email test checks each line, the discount, VAT and both totals in EUR, that SEK only appears in the rate line, and that a whole converted amount keeps its cents. Two saved EUR runs (the user's TC08 run and the fake TC07 run) loaded on the dev server with every quote amount in EUR. That check caught "27 EUR" for 310 SEK at 0.0871, which now reads "27,00 EUR". No live run: the email is code only.
+- Session 9: `npm test` passes (189 tests) and `tsc --noEmit` passes.
+  - **Cleared first, at the user's request:**
+    - Moved to the scratchpad:
+      - 8 uncommitted runs and their traces, from the user's manual tests and the currency fix
+      - `feedback.jsonl`
+      - `memory.json`
+    - The fake TC05 run's rerun review was undone with `git checkout`.
+
+    `data/` then matched the last commit.
+  - **Answer key:** `expected.test.ts` checks the three new totals (9,450, 8,400 and 6,000).
+  - **Routes with curl:**
+    - **Compare:** 404 for an unknown batch and `..%2Fexpected`. The Phase 6 baseline against itself blocks with "Pick at least one target case" without a target, "TC06 did not improve (3/3 to 3/3)" with TC06, and "TC11 is not in the baseline" with TC11.
+    - **Promote:**
+      - 400 for "v9", targets that aren't a list, and no JSON body
+      - 404 for an unknown batch
+      - 409 with the reasons for a gate that blocks
+
+      `active.txt` stayed `v1` throughout.
+  - **Live:** three batches through the real model, 117 runs, about $1.75 in all. The first (`k8ga`) was a trial and was moved out (Decision 41). The before and after table is under Session 9.
+  - **Browser, with Playwright from the scratchpad:** 22 of 22 checks. Promote was never clicked. For the corrections checks, a `feedback.jsonl` and a 15% `editedQuote` on the fake TC04 run were planted for the test and removed afterwards. The checks:
+    - on the v2 batch:
+      - the gate card defaults to the v1 `dvhy` baseline and shows 13 rows
+      - with no target it blocks and Promote is disabled
+      - ticking TC10 shows "0 3 +3", "Gate passes" and an enabled Promote
+      - also ticking TC06 blocks with "TC06 did not improve (3/3 to 3/3)"; unticking it enables Promote again
+    - the corrections card:
+      - lists "Agent: 120 kg KV-ESP-01, 10% discount → Approved: 120 kg KV-ESP-01, 15% discount" with both reasons, newest first
+      - leaves out a rerun with no reason
+    - on the v1 batch: TC10 is failing with "3 of 3 runs failed: questions" and the tooltip "Failed: questions", and its ✗ opens the run with its trace
+    - the prompt picker still reads "v1 (active)"
+    - no console errors, page errors or failed requests
+  - **Promote, by the user:**
+    - The first click got "Failed to execute 'json' on 'Response': Unexpected end of JSON input".
+    - The server log showed the gate had passed. Then `TypeError: setActivePromptVersion is not a function` at `promote/route.ts:23` gave a 500 with an empty body.
+    - Cause: the dev server started at 18:38 by another session served the new route a stale `lib/agent.ts` without the new export (see Notes). Nothing was written, and `active.txt` stayed `v1`.
+    - The old server was stopped outside this session, and a fresh one started at 19:34. The user promoted v2 at 19:35, and `prompts/active.txt` says `v2`.
 
 ## Notes
 
@@ -372,15 +507,18 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Full page Playwright screenshots show the sticky header in the middle of the page. That is how the screenshot is stitched, not a layout bug.
 - TC10's email asks about the Cold Brew minimum twice: the system's question, then the model's own ("Would you like to increase it to 10 kg, or skip the Cold Brew Blend for now?"). The v1 rule only stops repeats for a kg set to null and an item in `notInCatalog`, not for a line below its minimum. The status is still needs\_info, so the Phase 6 grader won't count it as a failure. A candidate for Phase 8 if the baseline has no clearer failure. The v1 baseline confirms it: all 3 TC10 runs asked it, each worded differently.
 - The dev server that was already running (started 17:20 by an earlier session) kept an old copy of `lib/agent.ts` for the new route files: "listPromptVersions is not a function", while the Evals page compiled the new one. Touching the files didn't help; a restart did. Restart the dev server after adding exports that new routes use.
-- The grader doesn't look at reasons or questions, so TC10's repeated question and a dropped TC08 FX reason would both still pass. Phase 8 needs either a case that fails on lines, total, status or currency, or a grader check for this.
+- The grader doesn't look at reasons or questions, so TC10's repeated question and a dropped TC08 FX reason would both still pass. Phase 8 needs either a case that fails on lines, total, status or currency, or a grader check for this. Session 9 added the `questions` check (Decision 41). Reasons are still not graded, so a dropped TC08 FX reason would still pass.
 - Session 8: the dev server Session 7 started again gave the new routes an old `lib/store.ts` ("readRun is not a function", a 500 where a 404 was due). Claude's attempt to stop it was blocked by the auto mode check, because Claude hadn't started that server in this session. Once it was stopped, a fresh `npm run dev` fixed it.
 - A browser logs any 4xx fetch as a console error, so a refused money note shows "Failed to load resource: 400" in the console. That is expected, not a bug.
 - Playwright can't read text inside a closed `<details>` with `innerText`; the check opens the Transcript first.
 - A reviewer can approve an edited quote above 50,000 SEK with plain Approve: the panel doesn't work out the status again for the edited quote. It is a local single user app where "Manager approve" is a label, not a role (Assumption 16).
 - TC04's live run wrote "Delivery before the weekend" as the delivery note, from the call. The agent's delivery notes are not graded.
+- Session 9: the dev server started at 18:38 by another session ran the new routes' error paths and the changed `grade` fine, so Claude skipped the restart. The promote success path then failed: it is the only path that calls the new `setActivePromptVersion` export, and the server's copy of `lib/agent.ts` didn't have it. The error paths only used older exports. Restart the dev server after adding exports, even when the new routes seem to work. Checking error paths with curl doesn't prove the success path loads.
+- The Evals page reads a response as JSON before checking its status. So a 500 with an empty body shows the parse error instead of "Could not promote (500)". `SuiteForm` does the same. Offered as a fix, not done.
+- Sonnet 5.5 read every harder case right under v1: two changes of mind, an added quantity and a competitor brand. Its weak spot in this set is what it writes to the customer, not what it reads.
 
 ## Next
 
-- Phase 8: the v1 baseline has no failure. The plan says to say so and add a harder case (two changes of mind in one call, say) until one fails. TC10's repeated question is the other candidate, but today's grader doesn't see it.
-- Parked from Session 8: grade memory in the evals with fixed notes per case instead of the memory store. TC11 would be `tc01.txt` with "Always wants delivery on Tuesdays" and expect Tuesday in `deliveryNote`. TC12 would be a call that asks for Thursday this time, expecting Thursday and not Tuesday. That needs `EvalCase.memory`, a delivery check in `grade`, the notes in the trace's `end` event, and a new v1 baseline, since the current one has no such cases.
+- Phase 9: the README. The Phase 8 before and after table, the failed run walkthrough and the run ids are under Session 9.
+- Parked from Session 8: grade memory in the evals with fixed notes per case instead of the memory store. TC14 would be `tc01.txt` with "Always wants delivery on Tuesdays" and expect Tuesday in `deliveryNote`. TC15 would be a call that asks for Thursday this time, expecting Thursday and not Tuesday. (They were TC11 and TC12 in Session 8; Phase 8 took those ids.) That needs `EvalCase.memory`, a delivery check in `grade`, the notes in the trace's `end` event, and a new v1 baseline, since the current one has no such cases.
 - Correct the times in `TIMELOG.md`.

@@ -40,5 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# case material
-/AI-Info/implementation-plans/ai-engineer-take-home-case.pdf
+# case material and any other pdfs
+*.pdf
+
+# claude code local settings
+.claude/settings.local.json

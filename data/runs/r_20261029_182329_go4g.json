@@ -1,0 +1,58 @@
+{
+  "id": "r_20261029_182329_go4g",
+  "createdAt": "2026-10-29T18:23:33.138Z",
+  "transcript": "SA: Kvarn Kaffe, hej!\nC: Hej, Elin here at Bageri Kanel in Uppsala.\nSA: Hi Elin, what can I do for you?\nC: We're starting to sell coffee by the cup next month, finally.\nSA: Exciting! What are you thinking of serving?\nC: That Ethiopian one, the single origin. People loved it at the tasting.\nSA: The Single Origin Ethiopia, yes. How much would you like?\nC: Hmm. A few bags? I honestly don't know how fast it'll go.\nSA: Sure. Do you know roughly how many kilos?\nC: Not really, a few bags to start. My business partner does the numbers and is away until Friday.\nSA: No problem, I'll put something together and we can confirm.\nC: Lovely, tack!\n",
+  "customer": "Bageri Kanel",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v2",
+  "batch": "b_20261029_182309_grnb",
+  "caseId": "TC05",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Bageri Kanel",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-ESP-02",
+        "kg": null,
+        "evidence": "A few bags? I honestly don't know how fast it'll go."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [],
+    "totalKg": 0,
+    "subtotalSek": 0,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 0,
+    "deliverySek": 0,
+    "totalExclVatSek": 0,
+    "vatSek": 0,
+    "totalInclVatSek": 0,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "needs_info",
+  "reasons": [
+    "Quantity unclear for Single Origin Ethiopia"
+  ],
+  "questions": [
+    "How many kg of Single Origin Ethiopia would you like?"
+  ],
+  "email": "Hi Bageri Kanel,\n\nThanks for the call today.\n\nBefore we can finalise the quote:\n1. How many kg of Single Origin Ethiopia would you like?\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 2,
+    "inputTokens": 3616,
+    "outputTokens": 181,
+    "costUsd": 0.009042,
+    "ms": 3798
+  }
+}

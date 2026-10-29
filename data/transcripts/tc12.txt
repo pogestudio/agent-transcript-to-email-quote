@@ -1,0 +1,14 @@
+SA: Kvarn Kaffe, det är Sara.
+C: Hej Sara, Karim from Bistro Lyktan in Örebro.
+SA: Hi Karim! What can I do for you?
+C: The House Espresso, twenty kilo please.
+SA: Twenty kilo House Espresso.
+C: We hired a new barista, Tove. She's very good, but she pulls a lot of test shots. A lot.
+SA: Ha, the good ones do.
+C: So, eh, add another fifteen to the espresso. Femton more.
+SA: Fifteen more on the espresso, okay.
+C: Yes. Better too much than running out before Christmas.
+SA: True. Anything else?
+C: No, that's all. Only the espresso.
+SA: I'll send the quote over.
+C: Tack, hej då!
