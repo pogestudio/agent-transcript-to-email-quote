@@ -1,4 +1,4 @@
-import { formatDateTime, formatDay, formatMoney, formatRate, formatSek } from "./format";
+import { formatDateTime, formatDay, formatQuoteAmount, formatRate } from "./format";
 import { discountPct as volumeDiscountPct, VAT_RATE } from "./pricing";
 import type { Quote, Status } from "./types";
 
@@ -17,24 +17,26 @@ export function buildEmail({ customer, quote, status, questions, notInCatalog, d
   const out = [customer ? `Hi ${customer},` : "Hi,", "", "Thanks for the call today."];
 
   if (quote && quote.lines.length > 0) {
+    // Every amount is in the customer's currency when there is a rate; the pricing itself stays in SEK.
+    const { fx } = quote;
+    const amount = (sek: number) => formatQuoteAmount(sek, fx);
     out.push("Here is your quote from Kvarn Coffee Roasters:", "");
-    for (const line of quote.lines) out.push(`${line.kg} kg ${line.name}: ${formatSek(line.lineSek)}`);
+    for (const line of quote.lines) out.push(`${line.kg} kg ${line.name}: ${amount(line.lineSek)}`);
     if (quote.discountPct > 0) {
       const label = quote.discountPct === volumeDiscountPct(quote.totalKg) ? "Volume discount" : "Discount";
-      out.push(`${label} (${quote.discountPct}%): ${formatSek(quote.discountSek)} off`);
+      out.push(`${label} (${quote.discountPct}%): ${amount(quote.discountSek)} off`);
     }
     out.push(
-      `Delivery: ${quote.deliverySek ? formatSek(quote.deliverySek) : "free"}`,
-      `Total excl. VAT: ${formatSek(quote.totalExclVatSek)}`,
-      `VAT ${VAT_RATE * 100}%: ${formatSek(quote.vatSek)}`,
-      `Total incl. VAT: ${formatSek(quote.totalInclVatSek)}`,
+      `Delivery: ${quote.deliverySek ? amount(quote.deliverySek) : "free"}`,
+      `Total excl. VAT: ${amount(quote.totalExclVatSek)}`,
+      `VAT ${VAT_RATE * 100}%: ${amount(quote.vatSek)}`,
+      `Total incl. VAT: ${amount(quote.totalInclVatSek)}`,
     );
-    if (quote.fx) {
-      const { currency, rate, rateDate, fetchedAt, totalExclVat, totalInclVat } = quote.fx;
+    if (fx) {
       out.push(
         "",
-        `In ${currency}: ${formatMoney(totalExclVat, currency)} excl. VAT, ${formatMoney(totalInclVat, currency)} incl. VAT.`,
-        `1 SEK = ${formatRate(rate)} ${currency}, ECB reference rate of ${formatDay(rateDate)}, fetched ${formatDateTime(fetchedAt)}.`,
+        `1 SEK = ${formatRate(fx.rate)} ${fx.currency}, ECB reference rate of ${formatDay(fx.rateDate)}, fetched ${formatDateTime(fx.fetchedAt)}.`,
+        "Each amount is converted on its own and rounded to the cent.",
       );
     }
     if (quote.fxError) out.push("", "Prices are in SEK because today's exchange rate couldn't be fetched.");

@@ -5,6 +5,8 @@ export const APPROVAL_LIMIT_SEK = 50_000;
 export const VAT_RATE = 0.25;                             // case data; see Assumptions
 export const discountPct = (kg: number) => (kg >= 100 ? 10 : kg >= 50 ? 5 : 0);
 export const deliverySek = (kg: number) => (kg >= 30 ? 0 : 250);
+// SEK to the customer's currency, rounded to the cent. Each amount is converted on its own.
+export const convertSek = (sek: number, rate: number) => Math.round(sek * rate * 100) / 100;
 
 export function priceLine(sku: string, kg: number): QuoteLine {
   const product = findProduct(sku);
@@ -36,8 +38,8 @@ export function computeQuote(
   return {
     lines: quoteLines, totalKg, subtotalSek, discountPct: pct, discountSek, goodsAfterDiscountSek,
     deliverySek: delivery, totalExclVatSek, vatSek, totalInclVatSek,
-    fx: fx ? { ...fx, totalExclVat: Math.round(totalExclVatSek * fx.rate * 100) / 100,
-               totalInclVat: Math.round(totalInclVatSek * fx.rate * 100) / 100 } : null,
+    fx: fx ? { ...fx, totalExclVat: convertSek(totalExclVatSek, fx.rate),
+               totalInclVat: convertSek(totalInclVatSek, fx.rate) } : null,
     fxError,
   };
 }

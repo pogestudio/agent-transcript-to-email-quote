@@ -185,7 +185,7 @@ export function computeQuote(lines: { sku: string; kg: number }[], fx: Fx | null
 //   discountSek = Math.floor((subtotal * pct + 50) / 100)   whole kronor, rounded half up, no floats
 //   deliverySek = 0 when there are no lines
 //   vatSek      = totalExclVatSek * VAT_RATE                 exact: always a multiple of 0.25
-//   fx totals   = Math.round(sek * rate * 100) / 100
+//   fx totals   = convertSek(sek, rate) = Math.round(sek * rate * 100) / 100
 ```
 
 All catalog prices are whole kronor and kg are whole numbers, so every amount except VAT and the converted totals is an integer.
@@ -277,13 +277,13 @@ All money and status logic exists as pure, tested functions before any model is 
 2. `lib/email.ts`: `buildEmail(...)` fills a plain-text template from the Quote, status and questions. It contains:
    - a greeting with the customer name (or "Hi,")
    - one line per product ("20 kg House Espresso: 4 800 SEK"), the discount line when there is one, delivery (250 SEK or free), total excl. VAT, VAT and total incl. VAT
-   - with FX: the converted totals, "1 SEK = {rate} {CUR}", the ECB rate date and the fetch time
+   - with FX: every amount in the customer's currency, each converted with `convertSek` and shown with its cents, then "1 SEK = {rate} {CUR}", the ECB rate date, the fetch time and "Each amount is converted on its own and rounded to the cent." The pricing itself stays in SEK.
    - on FX failure: "Prices are in SEK because today's exchange rate couldn't be fetched."
    - items we don't sell, the delivery note, and the questions as a numbered list when the status is needs\_info. An item we don't sell is named once: while the questions are listed, its question already says it.
    - a sign-off. The agent's draft never says a discount above the standard was granted; only a manager's override (Phase 7) puts one in the email, labelled "Discount" instead of "Volume discount".
    - an `approved` flag for the email built after a review: no open questions.
    - nothing about the manager's approval: the email goes to the customer, and that step is internal. A needs\_approval draft ends like any other, and a person sends it only after the manager approves.
-3. Format money with one `formatSek(n)` helper based on `toLocaleString("sv-SE")`.
+3. Format money with one `formatSek(n)` helper based on `toLocaleString("sv-SE")`, and quote amounts with `formatQuoteAmount(sek, fx)`: the customer's currency when there is a rate, otherwise SEK. The email and `QuoteView` both use it.
 4. `lib/assemble.ts`: `assemble(extraction, fx, fxError, agentError)` → `{ quote, status, reasons, questions, email, blockedSkus }`. It drops lines with `kg: null` from the quote, moves SKUs that aren't in the catalog to `blockedSkus` and into `notInCatalog` (as "{sku} (unknown code)"), then calls `computeQuote`, `decideStatus` and `buildEmail`. With no extraction it returns needs\_info with the agent error as the reason.
 5. The fake agent now passes a hardcoded TC01 Extraction through `assemble()`.
 

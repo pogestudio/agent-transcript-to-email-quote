@@ -28,13 +28,26 @@ describe("buildEmail", () => {
     expect(buildEmail({ ...base, customer: null, quote: computeQuote(TC01, null, null) })).toMatch(/^Hi,\n/);
   });
 
-  it("shows the converted totals, rate, rate date and fetch time", () => {
+  it("shows every amount in the customer's currency, with the rate, rate date and fetch time", () => {
     const lines = [{ sku: "KV-FIL-01", kg: 40 }, { sku: "KV-ESP-02", kg: 20 }];
     const email = buildEmail({ ...base, quote: computeQuote(lines, EUR, null) });
-    expect(email).toContain(formatMoney(1208.08, "EUR"));
+    expect(email).toContain(`40 kg Morning Filter: ${formatMoney(731.64, "EUR")}`);
+    expect(email).toContain(`20 kg Single Origin Ethiopia: ${formatMoney(540.02, "EUR")}`);
+    expect(email).toContain(`Volume discount (5%): ${formatMoney(63.58, "EUR")} off`);
+    expect(email).toContain(`Total excl. VAT: ${formatMoney(1208.08, "EUR")}`);
+    expect(email).toContain(`VAT 25%: ${formatMoney(302.02, "EUR")}`);
+    expect(email).toContain(`Total incl. VAT: ${formatMoney(1510.1, "EUR")}`);
     expect(email).toContain(`1 SEK = ${formatRate(EUR.rate)} EUR`);
     expect(email).toContain(formatDay(EUR.rateDate));
     expect(email).toContain(formatDateTime(EUR.fetchedAt));
+    expect(email).toContain("Each amount is converted on its own and rounded to the cent.");
+    // The rate line is the only place SEK appears.
+    expect(email.split("\n").filter((line) => line.includes("SEK"))).toEqual([expect.stringMatching(/^1 SEK = /)]);
+  });
+
+  it("shows the cents on a converted amount that comes out whole", () => {
+    const email = buildEmail({ ...base, quote: computeQuote(TC01, { ...EUR, rate: 0.1 }, null) });
+    expect(email).toContain("20 kg House Espresso: 480,00 EUR");
   });
 
   it("explains an FX failure", () => {

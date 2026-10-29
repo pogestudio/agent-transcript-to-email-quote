@@ -231,6 +231,7 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 37. **Forget deletes the note, not the record.** The note leaves `memory.json`, and the run still lists it under "Memory used" as "No longer remembered".
 38. **Edits and a discount only apply to an approval.** A rerun reads the transcript again with the answers and the customer's memory; a reject saves only the reason and any note.
 39. **The email never mentions the manager's approval.** A needs\_approval draft used to end with "Our sales manager will confirm the quote shortly." The email goes to the customer and that step is internal, so the line was removed after the Phase 7 commit at the user's request. A needs\_approval draft now ends like any other, and approving it without changes keeps the draft email. Only a needs\_info approval gets a new email without changes, because its draft asks questions. Saved runs keep the email they were made with, so the fake TC04 run and the baseline runs still show the old line.
+40. **A quote in another currency shows every amount in that currency.** The email and the quote view used to list every amount in SEK and add only the two converted totals at the end. Rule 7 of the brief says the customer gets the quote in their own currency, so after the user's manual TC08 test every line, the discount, delivery, VAT and both totals are converted with the run's cached rate. The user chose the customer's currency only, without SEK next to it, so SEK only appears in the rate line. Each amount is rounded to the cent on its own, so the lines can be a cent off the total, and the email says so. The pricing, the approval limit and the graded total stay in SEK, so the evals don't change. Saved runs keep the email they were made with; their quote view shows the new layout, since it is drawn from the quote.
 
 ## Where a decision is saved
 
@@ -267,6 +268,7 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Production notes, one panel answer, Assumptions 7 and 15, a new Assumption 17, and the cut list.
 - Session 5: setup uses `ANTHROPIC_AGENT_API_KEY` in `.env` and says why; the status table's agent error row; the Phase 2 email rule for items we don't sell; Phase 4's trace, `parseExtraction`, the `runAgent` code, the v1 prompt with a note on the added rules, and the unit test list; the README run instructions in Phase 9.
 - Session 8, after the Phase 7 commit: Phase 2's email rules say the email never mentions the manager's approval, and the `approved` flag only removes the open questions.
+- Session 8, after the Phase 7 commit, currency: Phase 2's email rules show every amount in the customer's currency, step 3 names `formatQuoteAmount`, and the pricing contract names `convertSek`.
 - Session 6: a note in Phase 6, under the grade table, that TC08 also expects the FX reason but `expected.json` has no field for it and `grade` doesn't check reasons, so a run that quietly switches to SEK and drops the reason would still pass.
 
 ## Files
@@ -288,6 +290,7 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Session 8, new: `lib/memory.ts`, `lib/diff.ts`, `lib/review.ts`, `lib/memory.test.ts`, `lib/diff.test.ts`, `lib/stage.test.ts`, `lib/review.test.ts`, `app/api/runs/[id]/review/route.ts`, `app/api/runs/[id]/sent/route.ts`, `app/api/runs/[id]/to-eval/route.ts`, `app/api/memory/route.ts`, `components/MemoryUsed.tsx`, `components/RunChanges.tsx`.
 - Session 8, changed: `lib/agent.ts`, `lib/agent.test.ts`, `lib/evals.ts`, `lib/status.ts`, `lib/store.ts`, `app/runs/[id]/page.tsx`, `components/ReviewPanel.tsx`, `components/RunDetail.tsx`, `app/globals.css`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`. No changes to `data/`.
 - Session 8, after the Phase 7 commit: `lib/email.ts`, `lib/email.test.ts`, `lib/review.ts`, `lib/review.test.ts`, `AI-Info/implementation-plans/build-plan.md`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`.
+- Session 8, after the Phase 7 commit, currency: `lib/pricing.ts`, `lib/format.ts`, `lib/email.ts`, `lib/email.test.ts`, `components/QuoteView.tsx`, `AI-Info/implementation-plans/build-plan.md`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`. No changes to `data/`.
 
 ## Checks
 
@@ -355,6 +358,7 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
     - **Browser checks:** the first script ran 23 checks and 22 passed. The 23rd read the Transcript inside its closed `<details>`, and it passed in the resumed script. The resumed script ran 17 checks and 16 passed; the 17th flagged the console 400 from the refused note (see Notes). A last pass loaded 15 pages (the inbox filters, Evals, the new runs, two fake runs and an eval run) with no console errors, page errors or failed requests. An eval run shows its batch and case instead of the panel.
   - **Cleanup:** the 6 runs, 6 traces, `feedback.jsonl`, `memory.json` and the FB01 transcript were moved to the scratchpad, and `expected.json` was restored. `data/` matches its state before the session.
   - **After the Phase 7 commit**, with the manager line removed: `npm test` passes (173 tests) and `tsc --noEmit` passes. The email test checks that a needs\_approval draft says nothing about a manager and ends with "Reply to this email to confirm the order." A manager approval without changes keeps the draft email, and a needs\_info approval without changes drops the questions. No live run: the email is code only.
+  - **After the Phase 7 commit**, with every amount in the customer's currency: `npm test` passes (174 tests) and `tsc --noEmit` passes. The email test checks each line, the discount, VAT and both totals in EUR, that SEK only appears in the rate line, and that a whole converted amount keeps its cents. Two saved EUR runs (the user's TC08 run and the fake TC07 run) loaded on the dev server with every quote amount in EUR. That check caught "27 EUR" for 310 SEK at 0.0871, which now reads "27,00 EUR". No live run: the email is code only.
 
 ## Notes
 

@@ -1,4 +1,4 @@
-import { formatDateTime, formatDay, formatMoney, formatRate, formatSek } from "../lib/format";
+import { formatDateTime, formatDay, formatQuoteAmount, formatRate } from "../lib/format";
 import { discountPct as volumeDiscountPct } from "../lib/pricing";
 import type { Quote } from "../lib/types";
 
@@ -8,6 +8,8 @@ export default function QuoteView({ quote }: { quote: Quote | null }) {
   }
 
   const discountLabel = quote.discountPct === volumeDiscountPct(quote.totalKg) ? "Volume discount" : "Manager discount";
+  const { fx } = quote;
+  const amount = (sek: number) => formatQuoteAmount(sek, fx);
 
   return (
     <>
@@ -17,7 +19,7 @@ export default function QuoteView({ quote }: { quote: Quote | null }) {
             <tr>
               <th>Product</th>
               <th className="r">Kg</th>
-              <th className="r">SEK/kg</th>
+              <th className="r">{fx?.currency ?? "SEK"}/kg</th>
               <th className="r">Line</th>
             </tr>
           </thead>
@@ -30,8 +32,8 @@ export default function QuoteView({ quote }: { quote: Quote | null }) {
                   {line.belowMin && <span className="tag">Below {line.minKg} kg minimum</span>}
                 </td>
                 <td className="r">{line.kg}</td>
-                <td className="r">{formatSek(line.unitPriceSek)}</td>
-                <td className="r">{formatSek(line.lineSek)}</td>
+                <td className="r">{amount(line.unitPriceSek)}</td>
+                <td className="r">{amount(line.lineSek)}</td>
               </tr>
             ))}
           </tbody>
@@ -40,36 +42,33 @@ export default function QuoteView({ quote }: { quote: Quote | null }) {
 
       <dl className="totals">
         <dt>Subtotal, {quote.totalKg} kg</dt>
-        <dd>{formatSek(quote.subtotalSek)}</dd>
+        <dd>{amount(quote.subtotalSek)}</dd>
         {quote.discountPct > 0 && (
           <>
             <dt>
               {discountLabel} {quote.discountPct}%
             </dt>
-            <dd>{formatSek(quote.discountSek)} off</dd>
+            <dd>{amount(quote.discountSek)} off</dd>
             <dt className="strong">Goods after discount</dt>
-            <dd className="strong">{formatSek(quote.goodsAfterDiscountSek)}</dd>
+            <dd className="strong">{amount(quote.goodsAfterDiscountSek)}</dd>
           </>
         )}
         <dt>Delivery</dt>
-        <dd>{quote.deliverySek ? formatSek(quote.deliverySek) : "Free"}</dd>
+        <dd>{quote.deliverySek ? amount(quote.deliverySek) : "Free"}</dd>
         <dt className="strong">Total excl. VAT</dt>
-        <dd className="strong">{formatSek(quote.totalExclVatSek)}</dd>
+        <dd className="strong">{amount(quote.totalExclVatSek)}</dd>
         <dt>VAT 25%</dt>
-        <dd>{formatSek(quote.vatSek)}</dd>
+        <dd>{amount(quote.vatSek)}</dd>
         <dt className="grand">Total incl. VAT</dt>
-        <dd className="grand">{formatSek(quote.totalInclVatSek)}</dd>
+        <dd className="grand">{amount(quote.totalInclVatSek)}</dd>
       </dl>
 
-      {quote.fx && (
+      {fx && (
         <div className="notice notice-fx">
-          <strong>
-            In {quote.fx.currency}: {formatMoney(quote.fx.totalExclVat, quote.fx.currency)} excl. VAT,{" "}
-            {formatMoney(quote.fx.totalInclVat, quote.fx.currency)} incl. VAT
-          </strong>
+          <strong>Quoted in {fx.currency}. Each amount is converted on its own and rounded to the cent.</strong>
           <span className="small">
-            1 SEK = {formatRate(quote.fx.rate)} {quote.fx.currency} · ECB rate of {formatDay(quote.fx.rateDate)} ·
-            fetched {formatDateTime(quote.fx.fetchedAt)} · {quote.fx.source}
+            1 SEK = {formatRate(fx.rate)} {fx.currency} · ECB rate of {formatDay(fx.rateDate)} ·
+            fetched {formatDateTime(fx.fetchedAt)} · {fx.source}
           </span>
         </div>
       )}
