@@ -1,0 +1,66 @@
+{
+  "id": "r_20261029_171237_dro9",
+  "createdAt": "2026-10-29T17:12:41.116Z",
+  "transcript": "SA: Kvarn Kaffe, Sara speaking.\nC: Hej, it's Erik from Restaurang Hamnen in Göteborg. Down by the harbour, hence the name.\nSA: Hi Erik! What can I do for you?\nC: We're opening a second restaurant in December, in Majorna, so I'm ordering for both places.\nSA: Congratulations, that's big.\nC: Thanks, it's chaos. The kitchen isn't even finished. Anyway. We want to serve the Ethiopian, the single origin, in both.\nSA: The Single Origin Ethiopia, lovely. How much?\nC: A hundred and eighty kilo. Hundraåttio. That should get us through the opening and Christmas.\nSA: A hundred and eighty kilo of Single Origin Ethiopia.\nC: Yes. Just that one, nothing else.\nSA: That's a big order, I'll put the quote together.\nC: Great. Our finance guy wants it by email.\nSA: You'll have it today.\nC: Tack så mycket, hej då.\n",
+  "customer": "Restaurang Hamnen",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_171158_w8lu",
+  "caseId": "TC09",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Restaurang Hamnen",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-ESP-02",
+        "kg": 180,
+        "evidence": "A hundred and eighty kilo. Hundraåttio."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ESP-02",
+        "name": "Single Origin Ethiopia",
+        "kg": 180,
+        "unitPriceSek": 310,
+        "lineSek": 55800,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 180,
+    "subtotalSek": 55800,
+    "discountPct": 10,
+    "discountSek": 5580,
+    "goodsAfterDiscountSek": 50220,
+    "deliverySek": 0,
+    "totalExclVatSek": 50220,
+    "vatSek": 12555,
+    "totalInclVatSek": 62775,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "needs_approval",
+  "reasons": [
+    "50 220 SEK after discount is above the 50 000 SEK limit"
+  ],
+  "questions": [],
+  "email": "Hi Restaurang Hamnen,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n180 kg Single Origin Ethiopia: 55 800 SEK\nVolume discount (10%): 5 580 SEK off\nDelivery: free\nTotal excl. VAT: 50 220 SEK\nVAT 25%: 12 555 SEK\nTotal incl. VAT: 62 775 SEK\n\nOur sales manager will confirm the quote shortly.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 5827,
+    "outputTokens": 256,
+    "costUsd": 0.014214,
+    "ms": 3961
+  }
+}

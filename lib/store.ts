@@ -9,10 +9,10 @@ const resolve = (rel: string) => path.join(dataDir(), rel);
 
 const ensureDirFor = (file: string) => fs.mkdirSync(path.dirname(file), { recursive: true });
 
-// r_ + UTC time + random, e.g. r_20261029_075231_k3f9
-export function newId(): string {
+// Prefix + UTC time + random, e.g. r_20261029_075231_k3f9 for a run, b_ for an eval batch
+export function newId(prefix = "r"): string {
   const time = new Date().toISOString().replace(/\D/g, "");
-  return `r_${time.slice(0, 8)}_${time.slice(8, 14)}_${Math.random().toString(36).slice(2, 6)}`;
+  return `${prefix}_${time.slice(0, 8)}_${time.slice(8, 14)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
 export function readJson<T>(rel: string): T | null {

@@ -1,0 +1,80 @@
+{
+  "id": "r_20261029_171203_arjk",
+  "createdAt": "2026-10-29T17:12:07.480Z",
+  "transcript": "SA: Kvarn Kaffe, Sara här.\nC: Hej Sara, Petra at Kontoret Söder. The coworking place on Hornsgatan.\nSA: Hi Petra! How's it going over there?\nC: Full house. We took over the floor above us in September, so eh, twice the people and twice the coffee.\nSA: Congratulations. So a bigger order this time?\nC: Yes. Sixty kilo of the House Espresso for the machines.\nSA: Sixty kilo House Espresso.\nC: And then the organic one for the brewers, the Breakfast Blend. Forty kilo.\nSA: Forty kilo Organic Breakfast Blend. So that's a hundred kilo in total.\nC: A hundred on the dot. Good, that should last us until Christmas.\nSA: Should do!\nC: And the new espresso machine is enormous, it looks like a spaceship. Everyone wants to press the buttons.\nSA: Ha, sounds fun. I'll send the quote over.\nC: Tack så mycket, hej!\n",
+  "customer": "Kontoret Söder",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_171158_w8lu",
+  "caseId": "TC02",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Kontoret Söder",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "kg": 60,
+        "evidence": "Sixty kilo of the House Espresso for the machines."
+      },
+      {
+        "sku": "KV-ORG-01",
+        "kg": 40,
+        "evidence": "the organic one for the brewers, the Breakfast Blend. Forty kilo."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ESP-01",
+        "name": "House Espresso",
+        "kg": 60,
+        "unitPriceSek": 240,
+        "lineSek": 14400,
+        "minKg": 5,
+        "belowMin": false
+      },
+      {
+        "sku": "KV-ORG-01",
+        "name": "Organic Breakfast Blend",
+        "kg": 40,
+        "unitPriceSek": 230,
+        "lineSek": 9200,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 100,
+    "subtotalSek": 23600,
+    "discountPct": 10,
+    "discountSek": 2360,
+    "goodsAfterDiscountSek": 21240,
+    "deliverySek": 0,
+    "totalExclVatSek": 21240,
+    "vatSek": 5310,
+    "totalInclVatSek": 26550,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "All pricing rules met"
+  ],
+  "questions": [],
+  "email": "Hi Kontoret Söder,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n60 kg House Espresso: 14 400 SEK\n40 kg Organic Breakfast Blend: 9 200 SEK\nVolume discount (10%): 2 360 SEK off\nDelivery: free\nTotal excl. VAT: 21 240 SEK\nVAT 25%: 5 310 SEK\nTotal incl. VAT: 26 550 SEK\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 6334,
+    "outputTokens": 432,
+    "costUsd": 0.016988,
+    "ms": 4436
+  }
+}

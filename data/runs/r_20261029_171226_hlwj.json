@@ -1,0 +1,88 @@
+{
+  "id": "r_20261029_171226_hlwj",
+  "createdAt": "2026-10-29T17:12:31.771Z",
+  "transcript": "SA: Kvarn Kaffe, Sara speaking.\nC: Hello! This is Aino from Pohjola Studio. We're a design office in Helsinki.\nSA: Hi Aino, welcome. How can I help?\nC: A colleague had your coffee in Stockholm and now the whole office wants it.\nSA: Ha, that's nice to hear.\nC: So, for the office: forty kilos of the Morning Filter.\nSA: Forty kilo Morning Filter.\nC: And, um, the Ethiopian for the espresso machine. Twenty kilos of that.\nSA: Twenty kilo Single Origin Ethiopia. Anything else?\nC: No, that's it. Oh, and could you send the quote in euros? Our finance team works in euros.\nSA: Of course, we'll convert it at today's rate.\nC: Kiitos! Thank you.\n",
+  "customer": "Pohjola Studio",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_171158_w8lu",
+  "caseId": "TC07",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Pohjola Studio",
+    "currency": "EUR",
+    "lines": [
+      {
+        "sku": "KV-FIL-01",
+        "kg": 40,
+        "evidence": "forty kilos of the Morning Filter"
+      },
+      {
+        "sku": "KV-ESP-02",
+        "kg": 20,
+        "evidence": "the Ethiopian for the espresso machine. Twenty kilos of that."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-FIL-01",
+        "name": "Morning Filter",
+        "kg": 40,
+        "unitPriceSek": 210,
+        "lineSek": 8400,
+        "minKg": 5,
+        "belowMin": false
+      },
+      {
+        "sku": "KV-ESP-02",
+        "name": "Single Origin Ethiopia",
+        "kg": 20,
+        "unitPriceSek": 310,
+        "lineSek": 6200,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 60,
+    "subtotalSek": 14600,
+    "discountPct": 5,
+    "discountSek": 730,
+    "goodsAfterDiscountSek": 13870,
+    "deliverySek": 0,
+    "totalExclVatSek": 13870,
+    "vatSek": 3467.5,
+    "totalInclVatSek": 17337.5,
+    "fx": {
+      "currency": "EUR",
+      "rate": 0.090913,
+      "rateDate": "2026-10-29",
+      "fetchedAt": "2026-10-29T17:12:30.200Z",
+      "source": "Frankfurter (ECB reference rates)",
+      "totalExclVat": 1260.96,
+      "totalInclVat": 1576.2
+    },
+    "fxError": null
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "All pricing rules met"
+  ],
+  "questions": [],
+  "email": "Hi Pohjola Studio,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n40 kg Morning Filter: 8 400 SEK\n20 kg Single Origin Ethiopia: 6 200 SEK\nVolume discount (5%): 730 SEK off\nDelivery: free\nTotal excl. VAT: 13 870 SEK\nVAT 25%: 3 467,50 SEK\nTotal incl. VAT: 17 337,50 SEK\n\nIn EUR: 1 260,96 EUR excl. VAT, 1 576,20 EUR incl. VAT.\n1 SEK = 0,090913 EUR, ECB reference rate of 29 Oct 2026, fetched 29 Oct, 18:12.\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 6347,
+    "outputTokens": 489,
+    "costUsd": 0.017584,
+    "ms": 4934
+  }
+}

@@ -1006,3 +1006,97 @@ td.r {
     display: none;
   }
 }
+
+/* Evals */
+
+.suite-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.suite-form select {
+  width: 160px;
+}
+
+.suite-form .hint {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+
+.batch-pick {
+  width: min(100%, 340px);
+}
+
+.progress {
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.eval-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.stat-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-bad {
+  background: var(--error-bg);
+}
+
+.stat-bad .stat-value {
+  color: var(--error-fg);
+}
+
+.eval-table td {
+  vertical-align: middle;
+}
+
+.case-id {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.marks {
+  display: flex;
+  gap: 4px;
+}
+
+.mark {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mark-pass {
+  background: var(--ready-bg);
+  color: var(--ready-fg);
+}
+
+.mark-fail {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+.mark-pending {
+  background: var(--surface-sunken);
+  color: var(--text-muted);
+}
+
+a.mark:hover {
+  box-shadow: inset 0 0 0 1.5px currentColor;
+}

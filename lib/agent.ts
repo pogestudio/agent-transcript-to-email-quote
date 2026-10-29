@@ -10,7 +10,7 @@ import type { Extraction, Fx, Memory, Run } from "./types";
 
 export type RunInput = {
   transcript: string; customer: string | null; fxFail: boolean; parentId?: string;
-  source?: Run["source"]; promptVersion?: string;
+  source?: Run["source"]; promptVersion?: string; batch?: string; caseId?: string;
 };
 
 export const MODEL = "claude-sonnet-5-5";
@@ -24,6 +24,12 @@ const PROMPT_VERSION = /^v\d+$/;
 const promptFile = (name: string) => path.join(process.cwd(), "prompts", name);
 
 export const activePromptVersion = () => fs.readFileSync(promptFile("active.txt"), "utf8").trim();
+
+// v1, v2, … from the prompts folder, in number order.
+export const listPromptVersions = () =>
+  fs.readdirSync(promptFile(""))
+    .flatMap((name) => (name.endsWith(".md") && PROMPT_VERSION.test(name.slice(0, -3)) ? [name.slice(0, -3)] : []))
+    .sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
 
 export function readPrompt(version: string): string {
   if (!PROMPT_VERSION.test(version)) throw new Error(`Unknown prompt version: ${version}`);

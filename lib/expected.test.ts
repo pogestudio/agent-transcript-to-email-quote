@@ -1,19 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { findProduct } from "./catalog";
+import { loadCases } from "./evals";
 import { computeQuote } from "./pricing";
-import { readJson, readTranscript } from "./store";
+import { readTranscript } from "./store";
 import type { Status } from "./types";
-
-// One case in data/expected.json. Phase 6 moves this type to lib/evals.ts with loadCases().
-type ExpectedCase = {
-  id: string; transcript: string; customer: string; fxFail: boolean; scenario: string;
-  expected: { lines: { sku: string; kg: number | null }[]; totalExclVatSek: number | null; status: Status; currency: string };
-};
 
 const STATUSES: Status[] = ["ready_for_review", "needs_approval", "needs_info"];
 
 // Reads the real data/ folder: this checks our own answer key, not the code.
-const CASES = readJson<ExpectedCase[]>("expected.json") ?? [];
+const CASES = loadCases();
 const PRICED = CASES.filter((c) => c.expected.totalExclVatSek !== null);
 
 describe("expected.json", () => {

@@ -1,0 +1,70 @@
+{
+  "id": "r_20261029_171207_3o5y",
+  "createdAt": "2026-10-29T17:12:12.705Z",
+  "transcript": "SA: Kvarn Kaffe, det är Sara.\nC: Hej! Omar here, from Kafé Solsidan in Malmö. Near Möllan.\nSA: Hi Omar! What can I do for you?\nC: So we're changing the menu for the winter. Eh, do you have Kenya AA?\nSA: Kenya AA... I'll have to check that, I'm not sure.\nC: Okay. If you have it, ten kilo of the Kenya. Our regulars keep asking for it.\nSA: Ten kilo Kenya AA, if we have it. Anything else?\nC: Yes, the normal filter, the Morning Filter. Twenty kilo.\nSA: Twenty kilo Morning Filter.\nC: Mm. Sorry, someone just dropped a whole tray here... okay. Where was I.\nSA: Twenty kilo Morning Filter and the Kenya.\nC: Right, that's it. Tjugo kilo filter, and the Kenya if you can.\nSA: I'll send you a quote.\nC: Tack, hej!\n",
+  "customer": "Kafé Solsidan",
+  "fxFail": false,
+  "source": "eval",
+  "promptVersion": "v1",
+  "batch": "b_20261029_171158_w8lu",
+  "caseId": "TC03",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Kafé Solsidan",
+    "currency": "SEK",
+    "lines": [
+      {
+        "sku": "KV-FIL-01",
+        "kg": 20,
+        "evidence": "Tjugo kilo filter, and the Kenya if you can."
+      }
+    ],
+    "notInCatalog": [
+      "Kenya AA"
+    ],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-FIL-01",
+        "name": "Morning Filter",
+        "kg": 20,
+        "unitPriceSek": 210,
+        "lineSek": 4200,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 20,
+    "subtotalSek": 4200,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 4200,
+    "deliverySek": 250,
+    "totalExclVatSek": 4450,
+    "vatSek": 1112.5,
+    "totalInclVatSek": 5562.5,
+    "fx": null,
+    "fxError": null
+  },
+  "status": "needs_info",
+  "reasons": [
+    "\"Kenya AA\" is not in our catalog"
+  ],
+  "questions": [
+    "We don't sell Kenya AA. Would one of our other coffees work?"
+  ],
+  "email": "Hi Kafé Solsidan,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n20 kg Morning Filter: 4 200 SEK\nDelivery: 250 SEK\nTotal excl. VAT: 4 450 SEK\nVAT 25%: 1 112,50 SEK\nTotal incl. VAT: 5 562,50 SEK\n\nBefore we can finalise the quote:\n1. We don't sell Kenya AA. Would one of our other coffees work?\n\nBest regards,\nKvarn Coffee Roasters",
+  "blockedSkus": [],
+  "error": null,
+  "totals": {
+    "steps": 3,
+    "inputTokens": 6178,
+    "outputTokens": 355,
+    "costUsd": 0.015906,
+    "ms": 5683
+  }
+}

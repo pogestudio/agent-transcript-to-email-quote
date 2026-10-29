@@ -1,10 +1,10 @@
 # Progress
 
-Oct 29, 2026 · Sessions 1 to 6
+Oct 29, 2026 · Sessions 1 to 7
 
 ## Summary
 
-Phases 1 to 5 are done. The test set is in place: ten transcripts, one per hard case in the brief, with an answer key in `data/expected.json` that a unit test checks against the pricing code. The Run button posts to `POST /api/run`, and the real agent now reads the call: `claude-sonnet-5-5` searches the catalog, checks lines and the exchange rate with the three tools, and returns an Extraction. Code then computes every number, the status and the email with `assemble()`, and every run leaves a trace with each step, tool input and output, tokens, time and cost. All money and status rules are proven by unit tests, and the loop is tested against a fake SDK client. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing until Phase 7.
+Phases 1 to 6 are done. The test set is in place: ten transcripts, one per hard case in the brief, with an answer key in `data/expected.json` that a unit test checks against the pricing code. The Run button posts to `POST /api/run`, and the real agent now reads the call: `claude-sonnet-5-5` searches the catalog, checks lines and the exchange rate with the three tools, and returns an Extraction. Code then computes every number, the status and the email with `assemble()`, and every run leaves a trace with each step, tool input and output, tokens, time and cost. All money and status rules are proven by unit tests, and the loop is tested against a fake SDK client. The Evals page runs every case k times through the real agent, grades each run in code and links every result to its run and trace. The v1 baseline at k = 3 passed all 30 runs, so Phase 8 needs a harder case first. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing until Phase 7.
 
 ## What was built
 
@@ -99,6 +99,45 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - `lib/expected.test.ts` reads the real `data/` folder through `readJson` and `readTranscript`. It checks that every transcript file exists and that `computeQuote` of the expected lines gives the expected total for the 9 cases that have one. Two extras the user picked: the ids are unique with valid statuses (at least 10 cases, so feedback cases from Phase 7 don't break it), and every expected SKU is in the catalog. The case type is local to the test; Phase 6 moves it into `lib/evals.ts` with `loadCases()`. 30 new tests, 123 in total.
 - `pricing.test.ts` keeps its own copy of the totals: it proves the pricing rules, the new test checks the answer key.
 
+### Session 7: Phase 6
+
+- `lib/evals.ts`:
+  - `EvalCase` (moved from `expected.test.ts`) and `loadCases()`.
+  - `grade(expected, run)` returns `{ pass, lines, total, status, currency, invented, overEscalated, underEscalated, blocked, failed }`. `total` is `null` when skipped; `failed` names the failed checks for the tooltip.
+  - `summarize(results, k)`: runs passed, pass^k, line, total and status counts, over and under escalations, invented, blocked, cost per run (mean, min, max), latency (median, max) and the counts per case.
+  - `runSuite(promptVersion, k)` writes `data/evals/<batch>.json`, runs each case k times with at most 3 at a time through `runAgent` with `source: "eval"`, `batch` and `caseId`, and rewrites the file after each run. It returns `{ batch, done }` at once; `done` settles when the batch is finished.
+  - `readBatch(id)` only accepts ids like `b_…`; `listBatches()` gives the batches newest first without their results.
+- `lib/agent.ts`: `listPromptVersions()` lists `v1`, `v2`, … from `prompts/` in number order. `RunInput` gains `batch` and `caseId`.
+- `lib/store.ts`: `newId(prefix = "r")`, so batches get `b_` ids.
+- Routes:
+  - `POST /api/evals` gives 400 for an unknown prompt version or a k that isn't a whole number from 1 to 5, starts the suite, passes `done` to Next's `after()` and returns `{ batch }`.
+  - `GET /api/evals` lists the batches.
+  - `GET /api/evals/[batch]` returns the batch with its summary, or 404.
+  - `GET /api/prompts` returns `{ versions, active }`.
+- Evals page (`?batch=` picks the batch, like the inbox's `?view=`):
+  - `SuiteForm`: prompt version, k (default 3), Run suite and "10 cases × 3 = 30 runs". The button reads "Suite running…" and is disabled while any batch runs.
+  - `EvalResults`: batch selector, "Running… n / 30 runs" polled every 2 s, then router refresh once done. A summary row of stat tiles; Invented turns red above 0.
+  - A table per case: case, scenario, expected status, one ✓ or ✗ per run linking to `/runs/[id]` with "Failed: lines, total" as its tooltip, grey dots for queued runs, and lines, total and status as x/k ("n/a" for TC05's total).
+- `lib/evals.test.ts`: the 8 tests the plan lists (a perfect run, a wrong kg, over and under escalation, a currency mismatch, an invented line by SKU and by price, pass^k with min, max, mean and median). The runs are built with the real `assemble()`. The user chose no extras. 131 tests in total.
+- `expected.test.ts` now uses `loadCases()` from `lib/evals.ts`.
+
+**v1 baseline:** batch `b_20261029_171158_w8lu`, k = 3, started from the Run suite button.
+
+| Metric | Result |
+| --- | --- |
+| Runs passed | 30 of 30 |
+| pass^k | 10 of 10 cases |
+| Lines, total, status | 30 of 30, 27 of 27 (TC05 skipped), 30 of 30 |
+| Over and under escalations | 0 and 0 |
+| Invented | 0 |
+| Blocked SKUs | 0 |
+| Cost per run | $0.0150 mean, $0.0090 to $0.0183 |
+| Latency | 4.6 s median, 6.5 s max; the whole batch took 49 s |
+
+- No failures. Every case's three runs gave the same lines and status, and almost the same cost (TC05 is cheapest with 2 steps, TC10 most expensive).
+- Things the grader doesn't check, all fine: TC08 had the FX reason in all 3 runs, with the model keeping EUR as the v1 rule says. TC07 used 0.090913 with the rate date 2026-10-29. TC04 recorded 15% every time. TC03 put "Kenya AA" in `notInCatalog` and blocked nothing.
+- TC10 asked its own Cold Brew minimum question in all 3 runs, worded three different ways, on top of the system's question (see Notes).
+
 ## Decisions
 
 1. **Status and stage are separate.** Status is the agent's verdict and the only thing the evals grade. The stage (To review, Needs manager, Waiting on customer, Ready to send, Sent, Rejected, Replaced) is where the run is in its life and is never graded.
@@ -123,6 +162,12 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 20. **The reviewer's customer name wins in the email.** The model's name is the fallback when the name field is empty.
 21. **Transcripts are fixed against the reading, not the model.** A transcript is changed only when a person would read it differently too, never to make the model pass. Model failures stay for the Phase 6 baseline.
 22. **One hard case per transcript.** No extra traps such as a product we don't sell or a discount request in a case meant for something else, so a failure points at one cause.
+23. **Currency is graded on the quote, not the model's extraction.** It is `quote.fx.currency`, or SEK without a rate, so TC08 expects SEK while the model correctly keeps EUR. A run with no quote fails currency.
+24. **Lines are graded after blocking.** The model's lines minus blocked SKUs, the lines the quote was built from, so a blocked made up code is reported but doesn't fail the run. They are compared as a sorted list, so a duplicated line fails too.
+25. **pass^k needs all k runs.** A case with fewer than k results, such as during a running batch, doesn't count as passed.
+26. **k is a whole number from 1 to 5,** so a typo can't start hundreds of paid runs.
+27. **The suite runs in Next's `after()`.** Checked in the bundled Next 16.4 docs: `after()` takes a promise, keeps the work going after the response, and finishes pending work on a graceful shutdown. `runSuite` writes the batch file before it returns, so the first poll always finds it.
+28. **The baseline stays in the repo; trial batches don't.** The v1 baseline batch with its 30 runs and traces stays in `data/` for Phase 8's gate and the Phase 9 demo. The k = 1 smoke batch was moved out.
 
 ## Where a decision will be saved (Phase 7)
 
@@ -138,6 +183,7 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - `computeQuote` takes an optional `discountOverridePct`.
 - `RunInput` gains optional `source` and `promptVersion`. `Tracer` takes the model as well as the run id.
 - The status table's agent error row also covers an early stop, an API error and a missing key.
+- Session 7, not yet written into `build-plan.md`: `RunInput` gains `batch` and `caseId`; `newId` takes a prefix; `runSuite` returns `{ batch, done }`; a batch file gains `finishedAt`; each result also stores the run's `costUsd` and `ms`.
 
 ## Plan updates in `build-plan.md`
 
@@ -165,6 +211,8 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Session 5, changed: `lib/agent.ts`, `lib/email.ts`, `lib/email.test.ts`, `TIMELOG.md`, `AI-Info/implementation-plans/build-plan.md`, `AI-Info/implementation-plans/progress.md`.
 - Session 6, new: `data/transcripts/tc02.txt`, `tc03.txt`, `tc06.txt`, `tc09.txt`, `tc10.txt`, `data/expected.json`, `lib/expected.test.ts`.
 - Session 6, changed: `TIMELOG.md`, `AI-Info/implementation-plans/build-plan.md`, `AI-Info/implementation-plans/progress.md`.
+- Session 7, new: `lib/evals.ts`, `lib/evals.test.ts`, `app/api/evals/route.ts`, `app/api/evals/[batch]/route.ts`, `app/api/prompts/route.ts`, `components/SuiteForm.tsx`, `components/EvalResults.tsx`, `data/evals/b_20261029_171158_w8lu.json` with its 30 runs in `data/runs/` and 30 traces in `data/traces/`.
+- Session 7, changed: `lib/agent.ts`, `lib/store.ts`, `lib/expected.test.ts`, `app/evals/page.tsx`, `app/globals.css`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`.
 
 ## Checks
 
@@ -190,6 +238,17 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
   - `GET /api/transcripts` lists all 10 files.
   - Live, through `POST /api/run` on the dev server with the customer names from `expected.json`, each once: TC02, TC03, TC05, TC06, TC09 and TC10 all match the answer key on lines, total, status and currency. TC05 gives a zero line quote with total 0 (Decision 11); a null expected total means the total check is skipped. TC03 put "Kenya AA" in `notInCatalog` and blocked nothing; TC06 kept only the decaf; TC09 gave "50 220 SEK after discount is above the 50 000 SEK limit". About $0.009 to $0.018 per run, 3 to 6 s. Every run page returned 200.
   - The six runs were moved out of the repo, so `data/` still holds only the five Phase 1 fake runs.
+- Session 7: `npm test` passes (131 tests) and `tsc --noEmit` passes.
+  - Routes with curl: `GET /api/prompts` gives `{"versions":["v1"],"active":"v1"}`. `POST /api/evals` gives 400 for "v9", "../package", no body, and k 0, 6, 2.5 and "3"; none of them created a batch. An unknown batch and `..%2Fexpected` give 404, and `/evals?batch=b_nope` says so on the page.
+  - Smoke batch, v1 at k = 1 through `POST /api/evals`: 10 of 10 passed in 20 s. A separate script graded every run again from the raw run files and agreed. Eval runs carry `source: "eval"`, `batch` and `caseId`, and the inbox still lists only the 5 UI runs. Moved out of the repo afterwards.
+  - Baseline in the browser, with Playwright from a scratch folder outside the repo, 22 of 22 checks:
+    - the empty state, the form defaults, and k 9 disabling the button
+    - Run suite opening `?batch=`, "Suite running…", and 30 grey dots
+    - the counter climbing from 0 to 29 by polling, with no reload
+    - "finished" and the button coming back after the refresh
+    - 30 marks, and a mark opening its run page with the trace (6 events, tool rows, an end row)
+    - no console errors, page errors or failed requests
+  - The failure path, with a temporary copy of the batch with one TC06 result set to failed and invented 1: the ✗ showed "Failed: lines, total, invented", Invented turned red, TC06 read 2/3, and the ✗ opened its run and trace. The copy was deleted.
 
 ## Notes
 
@@ -201,9 +260,12 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - The model calls `convert_currency` with a made up amount (1000) because it never sees totals. It only checks that the rate exists; the quote uses the cached rate.
 - `tsconfig.json` has `strict: false`, so `if (!r.ok)` does not narrow the FX result; `r?.ok === false` does.
 - Full page Playwright screenshots show the sticky header in the middle of the page. That is how the screenshot is stitched, not a layout bug.
-- TC10's email asks about the Cold Brew minimum twice: the system's question, then the model's own ("Would you like to increase it to 10 kg, or skip the Cold Brew Blend for now?"). The v1 rule only stops repeats for a kg set to null and an item in `notInCatalog`, not for a line below its minimum. The status is still needs\_info, so the Phase 6 grader won't count it as a failure. A candidate for Phase 8 if the baseline has no clearer failure.
+- TC10's email asks about the Cold Brew minimum twice: the system's question, then the model's own ("Would you like to increase it to 10 kg, or skip the Cold Brew Blend for now?"). The v1 rule only stops repeats for a kg set to null and an item in `notInCatalog`, not for a line below its minimum. The status is still needs\_info, so the Phase 6 grader won't count it as a failure. A candidate for Phase 8 if the baseline has no clearer failure. The v1 baseline confirms it: all 3 TC10 runs asked it, each worded differently.
+- The dev server that was already running (started 17:20 by an earlier session) kept an old copy of `lib/agent.ts` for the new route files: "listPromptVersions is not a function", while the Evals page compiled the new one. Touching the files didn't help; a restart did. Restart the dev server after adding exports that new routes use.
+- The grader doesn't look at reasons or questions, so TC10's repeated question and a dropped TC08 FX reason would both still pass. Phase 8 needs either a case that fails on lines, total, status or currency, or a grader check for this.
 
 ## Next
 
-- Phase 6: `lib/evals.ts`, the eval routes and the Evals page, then the v1 baseline at k = 3.
+- Phase 7: review, feedback and memory.
+- Phase 8: the v1 baseline has no failure. The plan says to say so and add a harder case (two changes of mind in one call, say) until one fails. TC10's repeated question is the other candidate, but today's grader doesn't see it.
 - Correct the times in `TIMELOG.md`.
