@@ -52,13 +52,18 @@ describe("applyReview", () => {
     expect(out.review).toMatchObject({ asManager: true, discountPct: 15 });
     expect(out.editedQuote).toMatchObject({ discountSek: 4320, totalExclVatSek: 24480 });
     expect(out.editedEmail).toContain(`Discount (15%): ${formatSek(4320)} off`);
-    expect(out.editedEmail).not.toContain("Our sales manager will confirm");
   });
 
-  it("gives an approved email to an escalated run approved without changes", () => {
-    const out = saved(TC04, { action: "approve" });
+  it("keeps the draft email when a manager approves without changes", () => {
+    expect(review(TC04, { action: "approve" }))
+      .toEqual({ review: { action: "approve", reason: "", at: AT, asManager: true } });
+  });
+
+  it("gives a needs_info run approved without changes an email without the questions", () => {
+    const out = saved(TC10, { action: "approve" });
     expect(out.editedQuote).toBeUndefined();
-    expect(out.editedEmail).not.toContain("Our sales manager will confirm");
+    expect(TC10.email).toContain("Before we can finalise the quote:");
+    expect(out.editedEmail).not.toContain("Before we can finalise the quote:");
   });
 
   it.each([

@@ -9,7 +9,7 @@ type EmailInput = {
   questions: string[];
   notInCatalog: string[];
   deliveryNote: string | null;
-  approved?: boolean;     // a person approved it: nothing pending, no open questions
+  approved?: boolean;     // a person approved it: no open questions
 };
 
 // A discount above the volume tier only appears here after a manager set it on the quote.
@@ -45,9 +45,8 @@ export function buildEmail({ customer, quote, status, questions, notInCatalog, d
   if (!asking) for (const item of notInCatalog) out.push("", `We don't sell ${item}. Would one of our other coffees work?`);
   if (deliveryNote) out.push("", deliveryNote.replace(/[.!]?$/, "."));
 
-  if (!approved && status === "needs_approval") {
-    out.push("", "Our sales manager will confirm the quote shortly.");
-  } else if (asking) {
+  // The email goes to the customer, so it never mentions the manager's approval: that step is internal.
+  if (asking) {
     out.push("", "Before we can finalise the quote:");
     questions.forEach((q, i) => out.push(`${i + 1}. ${q}`));
   } else {

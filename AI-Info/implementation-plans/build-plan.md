@@ -281,7 +281,8 @@ All money and status logic exists as pure, tested functions before any model is 
    - on FX failure: "Prices are in SEK because today's exchange rate couldn't be fetched."
    - items we don't sell, the delivery note, and the questions as a numbered list when the status is needs\_info. An item we don't sell is named once: while the questions are listed, its question already says it.
    - a sign-off. The agent's draft never says a discount above the standard was granted; only a manager's override (Phase 7) puts one in the email, labelled "Discount" instead of "Volume discount".
-   - an `approved` flag for the email built after a review: no "our sales manager will confirm" line and no open questions.
+   - an `approved` flag for the email built after a review: no open questions.
+   - nothing about the manager's approval: the email goes to the customer, and that step is internal. A needs\_approval draft ends like any other, and a person sends it only after the manager approves.
 3. Format money with one `formatSek(n)` helper based on `toLocaleString("sv-SE")`.
 4. `lib/assemble.ts`: `assemble(extraction, fx, fxError, agentError)` → `{ quote, status, reasons, questions, email, blockedSkus }`. It drops lines with `kg: null` from the quote, moves SKUs that aren't in the catalog to `blockedSkus` and into `notInCatalog` (as "{sku} (unknown code)"), then calls `computeQuote`, `decideStatus` and `buildEmail`. With no extraction it returns needs\_info with the agent error as the reason.
 5. The fake agent now passes a hardcoded TC01 Extraction through `assemble()`.

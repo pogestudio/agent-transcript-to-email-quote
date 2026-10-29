@@ -58,10 +58,10 @@ describe("buildEmail", () => {
     expect(buildEmail({ ...asking, approved: true }).split(notSold)).toHaveLength(2);
   });
 
-  it("an approved email has no pending manager line and no questions", () => {
-    const pending = { ...base, status: "needs_approval" as const, quote: computeQuote(TC04, null, null) };
-    expect(buildEmail(pending)).toContain("Our sales manager will confirm");
-    expect(buildEmail({ ...pending, approved: true })).not.toContain("Our sales manager will confirm");
+  it("a needs_approval draft never mentions the manager, and an approved email has no questions", () => {
+    const pending = buildEmail({ ...base, status: "needs_approval" as const, quote: computeQuote(TC04, null, null) });
+    expect(pending).not.toMatch(/manager/i);
+    expect(pending).toContain("Reply to this email to confirm the order.");
 
     const questions = ["How many kg of Single Origin Ethiopia would you like?"];
     const asking = { ...base, status: "needs_info" as const, questions, quote: computeQuote(TC01, null, null) };

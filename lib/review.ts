@@ -20,8 +20,8 @@ const isLine = (v: unknown) => {
   return typeof l === "object" && l !== null && typeof l.sku === "string" && typeof l.kg === "number";
 };
 
-// The email a person approves: nothing pending and no open questions. The reviewer's customer
-// name wins, like in the agent's draft.
+// The email a person approves: no open questions. The reviewer's customer name wins, like in the
+// agent's draft.
 export function approvedEmail(run: Run, quote: Quote | null): string {
   return buildEmail({
     customer: run.customer ?? run.extraction?.customer ?? null, quote, status: run.status, questions: run.questions,
@@ -88,8 +88,7 @@ export function applyReview(run: Run, input: ReviewInput, at: string): Reviewed 
       ...(override !== null ? { discountPct: override } : {}),
     },
     ...(changed ? { editedQuote: quote } : {}),
-    // The draft of an escalated run says the manager will confirm or asks questions, so approving it
-    // gives a new email even without changes.
-    ...(changed || run.status !== "ready_for_review" ? { editedEmail: approvedEmail(run, quote) } : {}),
+    // A needs_info draft asks the customer questions, so approving it gives a new email even without changes.
+    ...(changed || run.status === "needs_info" ? { editedEmail: approvedEmail(run, quote) } : {}),
   };
 }
