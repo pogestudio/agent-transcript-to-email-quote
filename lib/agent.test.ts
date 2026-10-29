@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { API_KEY_VAR, MAX_STEPS, parseExtraction, runAgent } from "./agent";
+import { addMemory } from "./memory";
 import { readJson, readJsonl } from "./store";
 import type { Run, TraceEvent } from "./types";
 
@@ -105,6 +106,23 @@ describe("runAgent", () => {
     const run = await runAgent(input);
     expect(run.email.split("\n")[0]).toBe("Hi Café Linnea,");
     expect(run.extraction?.customer).toBe("Linnea, Café Linnea (Södermalm)");
+  });
+
+  it("sends the customer's memories to the model and saves them on the run", async () => {
+    const memory = addMemory("Café Linnea", "Always wants delivery on Tuesdays", "r_parent");
+    create.mockResolvedValueOnce(answer(JSON_TEXT));
+    const run = await runAgent(input);
+    expect(create.mock.calls[0][0].messages[0].content)
+      .toContain(`<customer_memory>${JSON.stringify([memory.note])}</customer_memory>`);
+    expect(run.memoryUsed).toEqual([memory]);
+  });
+
+  it("leaves the memory store out of eval runs", async () => {
+    addMemory("Café Linnea", "Always wants delivery on Tuesdays", "r_parent");
+    create.mockResolvedValueOnce(answer(JSON_TEXT));
+    const run = await runAgent({ ...input, source: "eval" });
+    expect(create.mock.calls[0][0].messages[0].content).toContain("<customer_memory>[]</customer_memory>");
+    expect(run.memoryUsed).toEqual([]);
   });
 
   it("sends a tool error back to the model with is_error", async () => {

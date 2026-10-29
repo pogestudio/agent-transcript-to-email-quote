@@ -3,6 +3,7 @@ import path from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import { assemble } from "./assemble";
 import { getRate, type RateResult } from "./fx";
+import { memoriesFor } from "./memory";
 import { newId, writeJson } from "./store";
 import { makeTools, TOOL_SCHEMAS } from "./tools";
 import { Tracer } from "./trace";
@@ -84,7 +85,8 @@ export async function runAgent(input: RunInput): Promise<Run> {
   const id = newId(), tracer = new Tracer(id, MODEL), started = Date.now();
   const promptVersion = input.promptVersion ?? activePromptVersion();
   const system = readPrompt(promptVersion);
-  const memories: Memory[] = [];   // memoriesFor(customer) arrives in Phase 7
+  // Eval runs leave the memory store out, so two batches differ only by their prompt.
+  const memories: Memory[] = input.source === "eval" ? [] : memoriesFor(input.customer);
   const ctx = { fxFail: input.fxFail, fxCache: new Map<string, RateResult>() };
   const tools = makeTools(ctx);
   const messages: Anthropic.MessageParam[] = [{ role: "user", content:

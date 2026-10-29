@@ -1,12 +1,14 @@
 import { runAgent } from "./agent";
 import { findProduct } from "./catalog";
-import { listJson, newId, readJson, readTranscript, writeJson } from "./store";
+import { computeQuote } from "./pricing";
+import { listJson, newId, readJson, readTranscript, writeJson, writeTranscript } from "./store";
 import type { Run, Status } from "./types";
 
 // One case in data/expected.json.
 export type EvalCase = {
   id: string; transcript: string; customer: string; fxFail: boolean; scenario: string;
   expected: { lines: { sku: string; kg: number | null }[]; totalExclVatSek: number | null; status: Status; currency: string };
+  source?: "feedback";                    // added from a reviewed run
 };
 
 export type Grade = {
@@ -49,6 +51,34 @@ export const MAX_PARALLEL = 3;
 const BATCH_ID = /^b_\w+$/;
 
 export const loadCases = () => readJson<EvalCase[]>("expected.json") ?? [];
+
+const feedbackTranscript = (runId: string) => `fb_${runId}.txt`;
+
+// The case made from this run, if a reviewer added it to the eval set.
+export const feedbackCaseOf = (runId: string) => loadCases().find((c) => c.transcript === feedbackTranscript(runId)) ?? null;
+
+// An approved run as a new case: its transcript, the approved lines and the status the reviewer picked.
+// The total is the standard price of those lines: the agent never sets a manager's discount, so a case
+// that expects one could never pass.
+export function addEvalCase(run: Run, status: Status): EvalCase {
+  const cases = loadCases();
+  const quote = run.editedQuote ?? run.quote;
+  const lines = (quote?.lines ?? []).map(({ sku, kg }) => ({ sku, kg }));
+  const last = Math.max(0, ...cases.map((c) => Number(/^FB(\d+)$/.exec(c.id)?.[1] ?? 0)));
+  const evalCase: EvalCase = {
+    id: `FB${String(last + 1).padStart(2, "0")}`, transcript: feedbackTranscript(run.id),
+    customer: run.customer ?? "", fxFail: run.fxFail,
+    scenario: run.review?.reason ? `Feedback: ${run.review.reason}` : `Feedback from run ${run.id}`,
+    expected: {
+      lines, totalExclVatSek: computeQuote(lines, null, null).totalExclVatSek, status,
+      currency: quote?.fx?.currency ?? "SEK",
+    },
+    source: "feedback",
+  };
+  writeTranscript(evalCase.transcript, run.transcript);
+  writeJson("expected.json", [...cases, evalCase]);
+  return evalCase;
+}
 
 export const readBatch = (id: string) => (BATCH_ID.test(id) ? readJson<EvalBatch>(`evals/${id}.json`) : null);
 

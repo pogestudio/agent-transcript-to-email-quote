@@ -1,10 +1,10 @@
 # Progress
 
-Oct 29, 2026 · Sessions 1 to 7
+Oct 29, 2026 · Sessions 1 to 8
 
 ## Summary
 
-Phases 1 to 6 are done. The test set is in place: ten transcripts, one per hard case in the brief, with an answer key in `data/expected.json` that a unit test checks against the pricing code. The Run button posts to `POST /api/run`, and the real agent now reads the call: `claude-sonnet-5-5` searches the catalog, checks lines and the exchange rate with the three tools, and returns an Extraction. Code then computes every number, the status and the email with `assemble()`, and every run leaves a trace with each step, tool input and output, tokens, time and cost. All money and status rules are proven by unit tests, and the loop is tested against a fake SDK client. The Evals page runs every case k times through the real agent, grades each run in code and links every result to its run and trace. The v1 baseline at k = 3 passed all 30 runs, so Phase 8 needs a harder case first. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing until Phase 7.
+Phases 1 to 7 are done. The test set is in place: ten transcripts, one per hard case in the brief, with an answer key in `data/expected.json` that a unit test checks against the pricing code. The Run button posts to `POST /api/run`, and the real agent now reads the call: `claude-sonnet-5-5` searches the catalog, checks lines and the exchange rate with the three tools, and returns an Extraction. Code then computes every number, the status and the email with `assemble()`, and every run leaves a trace with each step, tool input and output, tokens, time and cost. All money and status rules are proven by unit tests, and the loop is tested against a fake SDK client. The Evals page runs every case k times through the real agent, grades each run in code and links every result to its run and trace. The v1 baseline at k = 3 passed all 30 runs, so Phase 8 needs a harder case first. The review panel now saves: approve (with changes, or a manager discount), reject with a reason, or rerun with the customer's answers, each appended to `data/feedback.jsonl`. A reviewer can leave a note for the customer, which the agent gets on that customer's next UI run, and every note can be forgotten. The run page shows the memory used, the parent run and reruns, and the changes against the parent, and an approved run can become a new eval case.
 
 ## What was built
 
@@ -138,6 +138,58 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Things the grader doesn't check, all fine: TC08 had the FX reason in all 3 runs, with the model keeping EUR as the v1 rule says. TC07 used 0.090913 with the rate date 2026-10-29. TC04 recorded 15% every time. TC03 put "Kenya AA" in `notInCatalog` and blocked nothing.
 - TC10 asked its own Cold Brew minimum question in all 3 runs, worded three different ways, on top of the system's question (see Notes).
 
+### Session 8: Phase 7
+
+- `lib/memory.ts`:
+  - `addMemory(customer, note, sourceRunId)`, `memoriesFor(customer)` and `deleteMemory(customer, id)` on `data/memory.json`, keyed by the customer name lowercased and trimmed.
+  - A note about money is refused with "Prices and discounts are rules, not memories". The filter is the plan's regex plus "kronor" and "krona".
+  - Notes get `m_` ids and expire after 180 days; `memoriesFor` leaves expired ones out.
+- `lib/diff.ts`: `diffRuns(parent, child)` compares status, reasons, lines, total excl. VAT, currency, memory used and prompt version, and lists the email lines only the parent has and only the rerun has. Lines come from the extraction after blocking, so an unclear quantity reads "? kg KV-ESP-02".
+- `lib/review.ts` (new, pure):
+  - `applyReview(run, input, at)` holds the review rules and returns what to save on the run, or an error.
+  - `approvedEmail(run, quote)` builds the approved email.
+  - `followUpTranscript(transcript, answers)` adds `[Customer follow-up]` and the answers.
+  - The route and the browser preview both use it, so what is saved is what was shown.
+- `lib/agent.ts`: UI runs read `memoriesFor(customer)`; eval runs get none (Decision 29).
+- `lib/evals.ts`: `addEvalCase(run, status)` writes `data/transcripts/fb_<id>.txt` and appends the case to `expected.json`. `feedbackCaseOf(runId)` finds that case. `EvalCase` gains `source?: "feedback"`.
+- `lib/store.ts`: `readRun(id)` (only `r_` ids) and `writeTranscript(name, text)`. `lib/status.ts`: `STATUSES`.
+- Routes:
+  - `POST /api/runs/[id]/review`:
+    - 404 for an unknown run, 409 when it is already reviewed, 400 with the rule's message otherwise.
+    - A note to remember is added before anything else is saved, so a refused note saves nothing.
+    - Saves the review (plus `editedQuote` and `editedEmail` on an approval) and appends `{ runId, ...review }` to `data/feedback.jsonl`.
+    - A rerun calls `runAgent` with the same customer and FX flag and `parentId`, and returns `{ run, newRunId }`.
+  - `POST /api/runs/[id]/sent`: only an approved run; 409 when it is already sent.
+  - `POST /api/runs/[id]/to-eval`: only an approved run and a valid status; 409 when it is already in the eval set. Returns the new case.
+  - `DELETE /api/memory?customer=&id=`: 400 without both, 404 for an unknown note.
+- UI:
+  - The review panel saves. New:
+    - "Remember for this customer", disabled when the run has no customer name
+    - "Customer answers" on needs\_info runs
+    - a working Rerun that opens the new run
+    - the server's error under the panel
+    - "Saving…" or "Rerunning…" while it waits
+
+    The "Preview only" notes are gone.
+  - After a review it shows:
+    - the record, the remembered note, the customer answers and a link to the new draft
+    - Mark as sent
+    - on approved runs, Add to eval set with an expected status picker, then "In the eval set as FB01"
+  - An eval run shows its batch and case instead of the panel.
+  - The run page gets:
+    - a "Memory used" card with Forget per note ("No longer remembered" once forgotten)
+    - a "Changes vs parent" card
+    - "Rerun of" and "Rerun as" links in the header
+  - `RunDetail` posts to the routes, and its preview uses `approvedEmail`. The approved email now falls back to the model's customer name when the run has none, like the agent's draft (Decision 20).
+- Tests: 41 new, 172 in total.
+  - `memory.test.ts` (12)
+  - `diff.test.ts` (3)
+  - `stage.test.ts` (7, one per row of the stage table)
+  - `review.test.ts` (17)
+  - 2 new `agent.test.ts` tests: a stored note reaches the model in `<customer_memory>` and is saved as `memoryUsed`; an eval run gets `[]`.
+
+  `review.test.ts` and the agent tests are the two extras the user picked.
+
 ## Decisions
 
 1. **Status and stage are separate.** Status is the agent's verdict and the only thing the evals grade. The stage (To review, Needs manager, Waiting on customer, Ready to send, Sent, Rejected, Replaced) is where the run is in its life and is never graded.
@@ -168,12 +220,23 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 26. **k is a whole number from 1 to 5,** so a typo can't start hundreds of paid runs.
 27. **The suite runs in Next's `after()`.** Checked in the bundled Next 16.4 docs: `after()` takes a promise, keeps the work going after the response, and finishes pending work on a graceful shutdown. `runSuite` writes the batch file before it returns, so the first poll always finds it.
 28. **The baseline stays in the repo; trial batches don't.** The v1 baseline batch with its 30 runs and traces stays in `data/` for Phase 8's gate and the Phase 9 demo. The k = 1 smoke batch was moved out.
+29. **Eval runs leave the memory store out.** Otherwise a reviewer's note would change every later batch, and Phase 8 would compare memories as well as prompts. Grading memory in the evals was discussed and parked (see Next).
+30. **A case made from a review expects standard pricing.** FB01, from TC04 approved by the manager at 15%, expects 25,920, not 24,480. The agent never sets a manager's discount, so that case could never pass, and `expected.test.ts` recomputes every total without an override.
+31. **Only approved runs become eval cases.** Their ids are FB01, FB02 and so on. The scenario is "Feedback: {reason}", or "Feedback from run {id}" without a reason.
+32. **Only UI runs are reviewed.** Eval runs are graded by code, and a review would write onto the baseline's runs.
+33. **A run is reviewed once.** A second review gets 409. A rerun marks the parent Replaced, and the new draft is reviewed instead.
+34. **The money filter also refuses "kronor" and "krona".** The plan's `\bkr\b` lets "100 kronor off" through.
+35. **Remember is one optional text field.** It replaces the checkbox in Decision 7. It is disabled when the run has no customer name, because memories are keyed by that name.
+36. **A refused note stops the whole review.** Nothing is saved, so the reviewer fixes the note and submits again.
+37. **Forget deletes the note, not the record.** The note leaves `memory.json`, and the run still lists it under "Memory used" as "No longer remembered".
+38. **Edits and a discount only apply to an approval.** A rerun reads the transcript again with the answers and the customer's memory; a reject saves only the reason and any note.
 
-## Where a decision will be saved (Phase 7)
+## Where a decision is saved
 
 - `data/runs/<id>.json`: `review`, `editedQuote`, `editedEmail` and later `sentAt`.
-- `data/feedback.jsonl`: one line per decision; the Evals page reads it to find corrections that keep coming back.
-- Never `data/memory.json`: memories are lasting customer preferences, and notes about prices or discounts are refused.
+- `data/feedback.jsonl`: one line per decision, `{ runId, ...review }`. Phase 8's corrections panel will read it to find corrections that keep coming back.
+- `data/memory.json`: only a note the reviewer typed in "Remember for this customer". The decision itself never goes there, and notes about prices or discounts are refused.
+- `data/expected.json` and `data/transcripts/fb_<id>.txt`: only when the reviewer clicks Add to eval set.
 
 ## Contract changes
 
@@ -184,6 +247,13 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - `RunInput` gains optional `source` and `promptVersion`. `Tracer` takes the model as well as the run id.
 - The status table's agent error row also covers an early stop, an API error and a missing key.
 - Session 7, not yet written into `build-plan.md`: `RunInput` gains `batch` and `caseId`; `newId` takes a prefix; `runSuite` returns `{ batch, done }`; a batch file gains `finishedAt`; each result also stores the run's `costUsd` and `ms`.
+- Session 8, not yet written into `build-plan.md`:
+  - `EvalCase` gains `source?: "feedback"`.
+  - `lib/review.ts` is new (not in the plan's layout).
+  - `store.ts` gains `readRun` and `writeTranscript`, and `status.ts` gains `STATUSES`.
+  - The review route returns `{ run, newRunId? }`, and to-eval returns the new case.
+  - Memory ids start with `m_`.
+  - `diffRuns` names its fields with the labels the table shows ("Total excl. VAT", "Memory used").
 
 ## Plan updates in `build-plan.md`
 
@@ -213,6 +283,8 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Session 6, changed: `TIMELOG.md`, `AI-Info/implementation-plans/build-plan.md`, `AI-Info/implementation-plans/progress.md`.
 - Session 7, new: `lib/evals.ts`, `lib/evals.test.ts`, `app/api/evals/route.ts`, `app/api/evals/[batch]/route.ts`, `app/api/prompts/route.ts`, `components/SuiteForm.tsx`, `components/EvalResults.tsx`, `data/evals/b_20261029_171158_w8lu.json` with its 30 runs in `data/runs/` and 30 traces in `data/traces/`.
 - Session 7, changed: `lib/agent.ts`, `lib/store.ts`, `lib/expected.test.ts`, `app/evals/page.tsx`, `app/globals.css`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`.
+- Session 8, new: `lib/memory.ts`, `lib/diff.ts`, `lib/review.ts`, `lib/memory.test.ts`, `lib/diff.test.ts`, `lib/stage.test.ts`, `lib/review.test.ts`, `app/api/runs/[id]/review/route.ts`, `app/api/runs/[id]/sent/route.ts`, `app/api/runs/[id]/to-eval/route.ts`, `app/api/memory/route.ts`, `components/MemoryUsed.tsx`, `components/RunChanges.tsx`.
+- Session 8, changed: `lib/agent.ts`, `lib/agent.test.ts`, `lib/evals.ts`, `lib/status.ts`, `lib/store.ts`, `app/runs/[id]/page.tsx`, `components/ReviewPanel.tsx`, `components/RunDetail.tsx`, `app/globals.css`, `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`. No changes to `data/`.
 
 ## Checks
 
@@ -249,6 +321,36 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
     - 30 marks, and a mark opening its run page with the trace (6 events, tool rows, an end row)
     - no console errors, page errors or failed requests
   - The failure path, with a temporary copy of the batch with one TC06 result set to failed and invented 1: the ✗ showed "Failed: lines, total, invented", Invented turned red, TC06 read 2/3, and the ✗ opened its run and trace. The copy was deleted.
+- Session 8: `npm test` passes (172 tests) and `tsc --noEmit` passes.
+  - **Route errors with curl, against the five fake runs.** Each case below gets the right code and message:
+    - 404: an unknown id or `..%2Fexpected`
+    - 400: no body, an unknown action, a reject without a reason, a discount on a ready run, 101% or 2.5%, an unknown SKU, kg 0, edited lines that aren't a list, approving TC05 without lines, an eval run, and the notes "Always 15% off" and "Gets 100 kronor off"
+    - 409: the already reviewed TC07
+    - the sent, to-eval and memory routes' 400, 404 and 409 cases
+
+    Nothing was written: the fake runs' checksums, `expected.json` and the transcripts were unchanged, and no `feedback.jsonl` or `memory.json` appeared.
+  - **Live in the browser, with Playwright from the scratchpad and the cached Chromium.** Six real runs, $0.009 to $0.016 each, 4 to 6 s:
+    - **TC01:** To review at 5,050. Rerun with the reason "Always wants Tuesday delivery" and the note "Always wants delivery on Tuesdays":
+      - the new run lists the note under Memory used
+      - the model wrote "Delivery on Tuesday", so the email says "Delivery on Tuesday."
+      - Changes vs parent shows only Memory used and that email line
+      - the parent is Replaced, with "Rerun as" and a link to the new draft
+    - **TC05:** Waiting on customer. With "20 kg" as the answer, the rerun is To review at 6,450. The changes show Needs info → Ready for review and "? kg KV-ESP-02" → "20 kg KV-ESP-02", and the rerun's transcript ends with `[Customer follow-up]` and `20 kg`.
+    - **Approve with changes** on the TC05 rerun at 25 kg: the button says "Approve with changes", the preview and the saved quote are 8,000 SEK, Ready to send, and it survives a reload.
+    - **TC03:** Reject without a reason is refused in the browser. With "Customer cancelled the order" it is Rejected and listed under the inbox's Rejected filter.
+    - **TC04:** Needs manager. At 15% the preview shows 24,480.
+      - The note "Always 15% off" is refused and nothing is saved.
+      - Without the note: "Manager approved with changes · 15% discount", Ready to send, and the email has "Discount (15%): 4 320 SEK off" and no manager line.
+      - Mark as sent gives Sent; Add to eval set with needs\_approval gives FB01; both survive a reload.
+    - **Forget** on the TC01 rerun: "No longer remembered" after a reload, `memory.json` is `{}`, and a second Forget gets 404.
+    - **Inbox:** Replaced, Rejected, Sent and Ready to send appear. To do lists the TC01 rerun and none of the replaced or reviewed runs.
+    - **Saved data:**
+      - `feedback.jsonl` has the 5 decisions with their run ids.
+      - FB01 expects KV-ESP-01 120 kg, 25,920, needs\_approval and SEK with `source: "feedback"`, and its transcript file equals the run's.
+      - With FB01 in place, `npm test` passed 175 tests (FB01 adds 3), and the suite form read "11 cases × 3 = 33 runs".
+    - **409s on the real runs:** a second review, a second Mark as sent and a second Add to eval set. Add to eval set on the rejected TC03 gets 400.
+    - **Browser checks:** the first script ran 23 checks and 22 passed. The 23rd read the Transcript inside its closed `<details>`, and it passed in the resumed script. The resumed script ran 17 checks and 16 passed; the 17th flagged the console 400 from the refused note (see Notes). A last pass loaded 15 pages (the inbox filters, Evals, the new runs, two fake runs and an eval run) with no console errors, page errors or failed requests. An eval run shows its batch and case instead of the panel.
+  - **Cleanup:** the 6 runs, 6 traces, `feedback.jsonl`, `memory.json` and the FB01 transcript were moved to the scratchpad, and `expected.json` was restored. `data/` matches its state before the session.
 
 ## Notes
 
@@ -263,9 +365,14 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - TC10's email asks about the Cold Brew minimum twice: the system's question, then the model's own ("Would you like to increase it to 10 kg, or skip the Cold Brew Blend for now?"). The v1 rule only stops repeats for a kg set to null and an item in `notInCatalog`, not for a line below its minimum. The status is still needs\_info, so the Phase 6 grader won't count it as a failure. A candidate for Phase 8 if the baseline has no clearer failure. The v1 baseline confirms it: all 3 TC10 runs asked it, each worded differently.
 - The dev server that was already running (started 17:20 by an earlier session) kept an old copy of `lib/agent.ts` for the new route files: "listPromptVersions is not a function", while the Evals page compiled the new one. Touching the files didn't help; a restart did. Restart the dev server after adding exports that new routes use.
 - The grader doesn't look at reasons or questions, so TC10's repeated question and a dropped TC08 FX reason would both still pass. Phase 8 needs either a case that fails on lines, total, status or currency, or a grader check for this.
+- Session 8: the dev server Session 7 started again gave the new routes an old `lib/store.ts` ("readRun is not a function", a 500 where a 404 was due). Claude's attempt to stop it was blocked by the auto mode check, because Claude hadn't started that server in this session. Once it was stopped, a fresh `npm run dev` fixed it.
+- A browser logs any 4xx fetch as a console error, so a refused money note shows "Failed to load resource: 400" in the console. That is expected, not a bug.
+- Playwright can't read text inside a closed `<details>` with `innerText`; the check opens the Transcript first.
+- A reviewer can approve an edited quote above 50,000 SEK with plain Approve: the panel doesn't work out the status again for the edited quote. It is a local single user app where "Manager approve" is a label, not a role (Assumption 16).
+- TC04's live run wrote "Delivery before the weekend" as the delivery note, from the call. The agent's delivery notes are not graded.
 
 ## Next
 
-- Phase 7: review, feedback and memory.
 - Phase 8: the v1 baseline has no failure. The plan says to say so and add a harder case (two changes of mind in one call, say) until one fails. TC10's repeated question is the other candidate, but today's grader doesn't see it.
+- Parked from Session 8: grade memory in the evals with fixed notes per case instead of the memory store. TC11 would be `tc01.txt` with "Always wants delivery on Tuesdays" and expect Tuesday in `deliveryNote`. TC12 would be a call that asks for Thursday this time, expecting Thursday and not Tuesday. That needs `EvalCase.memory`, a delivery check in `grade`, the notes in the trace's `end` event, and a new v1 baseline, since the current one has no such cases.
 - Correct the times in `TIMELOG.md`.

@@ -1,11 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { STATUS_LABEL } from "./StatusBadge";
 import { formatDateTime } from "../lib/format";
-import type { Review, Run } from "../lib/types";
+import { STATUSES } from "../lib/status";
+import type { Review, Run, Status } from "../lib/types";
 
 export type DraftLine = { sku: string; name: string; minKg: number; kg: number | null };
-export type Decision = { action: "approve" | "reject"; reason: string };
+export type Decision = { action: Review["action"]; reason: string; remember: string; customerAnswers: string };
 
 type Props = {
   run: Run;
@@ -17,9 +20,14 @@ type Props = {
   volumePct: number;          // the standard discount for the kg currently in the panel
   changed: boolean;
   blocker: string | null;     // why approving isn't possible right now
-  onDecide: (decision: Decision) => void;
-  onSent: () => void;
+  reruns: { id: string; createdAt: string }[];
+  evalCaseId: string | null;  // the eval case made from this run, if any
+  onDecide: (decision: Decision) => Promise<void>;     // these throw with the server's message
+  onSent: () => Promise<void>;
+  onAddToEval: (status: Status) => Promise<string>;    // returns the new case id
 };
+
+type Busy = Review["action"] | "sent" | "eval" | null;
 
 function reviewLabel(review: Review): string {
   if (review.action === "reject") return "Rejected";
@@ -29,23 +37,56 @@ function reviewLabel(review: Review): string {
 }
 
 export default function ReviewPanel(props: Props) {
-  const { run, draftLines, kg, onKgChange, discount, onDiscountChange, volumePct, changed, blocker, onDecide, onSent } = props;
+  const { run, draftLines, kg, onKgChange, discount, onDiscountChange, volumePct, changed, blocker } = props;
   const [reason, setReason] = useState("");
+  const [remember, setRemember] = useState("");
+  const [answers, setAnswers] = useState("");
+  const [evalStatus, setEvalStatus] = useState<Status>(run.status);
+  const [caseId, setCaseId] = useState(props.evalCaseId);
+  const [busy, setBusy] = useState<Busy>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isManager = run.status === "needs_approval";
   const requestedPct = run.extraction?.requestedDiscountPct ?? null;
   const approveLabel = `${isManager ? "Manager approve" : "Approve"}${changed ? " with changes" : ""}`;
 
+  async function act(key: Busy, work: () => Promise<void>) {
+    setBusy(key);
+    setError(null);
+    try {
+      await work();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // A reason is only required to reject; approving takes whatever is in the panel.
   function submit(action: Decision["action"]) {
     if (action === "reject" && !reason.trim()) return setError("Add a reason to reject.");
-    setError(null);
-    onDecide({ action, reason: reason.trim() });
+    act(action, () =>
+      props.onDecide({ action, reason: reason.trim(), remember: remember.trim(), customerAnswers: answers.trim() }),
+    );
+  }
+
+  if (run.source === "eval") {
+    return (
+      <section className="card">
+        <div className="card-head">
+          <h2>Review</h2>
+        </div>
+        <p className="hint">
+          An eval run from batch <Link href={`/evals?batch=${run.batch}`}>{run.batch}</Link>, case {run.caseId}. Eval runs
+          are graded by the suite, not reviewed.
+        </p>
+      </section>
+    );
   }
 
   if (run.review) {
     const { review } = run;
+    const approved = review.action === "approve";
     return (
       <section className="card">
         <div className="card-head">
@@ -59,10 +100,26 @@ export default function ReviewPanel(props: Props) {
           </span>
           {review.reason && <span>{review.reason}</span>}
         </div>
-        {review.action === "approve" && !run.sentAt && (
+        {review.remember && (
+          <p className="review-note">
+            <span className="label">Remembered for {run.customer}</span> {review.remember}
+          </p>
+        )}
+        {review.customerAnswers && (
+          <p className="review-note">
+            <span className="label">Customer answers</span> {review.customerAnswers}
+          </p>
+        )}
+        {review.action === "rerun" &&
+          props.reruns.map((r) => (
+            <p key={r.id} className="review-note">
+              <span className="label">New draft</span> <Link href={`/runs/${r.id}`}>{r.id}</Link>
+            </p>
+          ))}
+        {approved && !run.sentAt && (
           <div className="review-actions">
-            <button type="button" className="btn btn-primary" onClick={onSent}>
-              Mark as sent
+            <button type="button" className="btn btn-primary" disabled={busy !== null} onClick={() => act("sent", props.onSent)}>
+              {busy === "sent" ? "Saving…" : "Mark as sent"}
             </button>
             <span className="hint">Copy the email above, send it from your mail, then mark it as sent.</span>
           </div>
@@ -73,7 +130,40 @@ export default function ReviewPanel(props: Props) {
             <span className="small">{formatDateTime(run.sentAt)}</span>
           </div>
         )}
-        <p className="hint preview-note">Preview only: nothing is saved yet, and a refresh resets this page.</p>
+        {approved && (
+          <div className="review-actions">
+            {caseId ? (
+              <span className="hint">
+                In the eval set as {caseId}. See the <Link href="/evals">Evals page</Link>.
+              </span>
+            ) : (
+              <>
+                <select
+                  className="inline-select"
+                  aria-label="Expected status"
+                  value={evalStatus}
+                  onChange={(e) => setEvalStatus(e.target.value as Status)}
+                >
+                  {STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      Expect {STATUS_LABEL[s]}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  className="btn"
+                  disabled={busy !== null}
+                  onClick={() => act("eval", async () => setCaseId(await props.onAddToEval(evalStatus)))}
+                >
+                  {busy === "eval" ? "Adding…" : "Add to eval set"}
+                </button>
+                <span className="hint">The approved lines and this status become a new case.</span>
+              </>
+            )}
+          </div>
+        )}
+        {error && <p className="form-error">{error}</p>}
       </section>
     );
   }
@@ -143,21 +233,54 @@ export default function ReviewPanel(props: Props) {
         <textarea className="reason-box" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
       </label>
 
+      <div className="review-grid review-extra">
+        <label className="field">
+          <span className="label">Remember for this customer</span>
+          <input
+            type="text"
+            value={remember}
+            disabled={!run.customer}
+            placeholder={run.customer ? "Always wants delivery on Tuesdays" : ""}
+            onChange={(e) => setRemember(e.target.value)}
+          />
+          <span className="hint">
+            {run.customer
+              ? `A lasting preference, used on ${run.customer}'s next runs. Never prices or discounts.`
+              : "This run has no customer name, so nothing can be remembered."}
+          </span>
+        </label>
+        {run.status === "needs_info" && (
+          <label className="field">
+            <span className="label">Customer answers</span>
+            <textarea className="reason-box" rows={2} value={answers} onChange={(e) => setAnswers(e.target.value)} />
+            <span className="hint">Added to the transcript as a follow-up when you rerun.</span>
+          </label>
+        )}
+      </div>
+
       {error && <p className="form-error">{error}</p>}
 
       <div className="review-actions">
-        <button type="button" className="btn btn-primary" disabled={blocker !== null} onClick={() => submit("approve")}>
-          {approveLabel}
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={blocker !== null || busy !== null}
+          onClick={() => submit("approve")}
+        >
+          {busy === "approve" ? "Saving…" : approveLabel}
         </button>
-        <button type="button" className="btn" onClick={() => submit("reject")}>
-          Reject
+        <button type="button" className="btn" disabled={busy !== null} onClick={() => submit("reject")}>
+          {busy === "reject" ? "Saving…" : "Reject"}
         </button>
-        <button type="button" className="btn" disabled title="Needs the real agent">
-          Rerun
+        <button type="button" className="btn" disabled={busy !== null} onClick={() => submit("rerun")}>
+          {busy === "rerun" ? "Rerunning…" : "Rerun"}
         </button>
         {blocker && <span className="hint">{blocker}</span>}
       </div>
-      <p className="hint preview-note">Preview only: nothing is saved yet, and a refresh resets this page.</p>
+      <p className="hint preview-note">
+        Rerun reads the call again with the customer answers and the customer&apos;s memory. The kg and discount fields
+        only apply to an approval.
+      </p>
     </section>
   );
 }

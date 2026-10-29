@@ -51,6 +51,11 @@ export function readJsonl<T>(rel: string): T[] {
     .map((line) => JSON.parse(line) as T);
 }
 
+const RUN_ID = /^r_\w+$/;
+
+// Only ids like r_…, so a run id never becomes a path.
+export const readRun = (id: string) => (RUN_ID.test(id) ? readJson<Run>(`runs/${id}.json`) : null);
+
 // Newest first; all sources when none is given.
 export function listRuns(source?: Run["source"]): Run[] {
   return listJson<Run>("runs")
@@ -63,6 +68,13 @@ const TRANSCRIPT_NAME = /^[\w.-]+\.txt$/;
 export function readTranscript(name: string): string | null {
   const file = resolve(`transcripts/${name}`);
   return TRANSCRIPT_NAME.test(name) && fs.existsSync(file) ? fs.readFileSync(file, "utf8") : null;
+}
+
+export function writeTranscript(name: string, text: string): void {
+  if (!TRANSCRIPT_NAME.test(name)) throw new Error(`Bad transcript name: ${name}`);
+  const file = resolve(`transcripts/${name}`);
+  ensureDirFor(file);
+  fs.writeFileSync(file, text);
 }
 
 export function listTranscripts(): { name: string; text: string }[] {

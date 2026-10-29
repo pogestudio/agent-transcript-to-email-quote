@@ -2,17 +2,29 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import CopyButton from "./CopyButton";
+import MemoryUsed from "./MemoryUsed";
 import QuoteView from "./QuoteView";
 import ReviewPanel, { type Decision, type DraftLine } from "./ReviewPanel";
+import RunChanges from "./RunChanges";
 import StageBadge from "./StageBadge";
 import StatusBadge from "./StatusBadge";
 import { findProduct } from "../lib/catalog";
-import { buildEmail } from "../lib/email";
+import type { Change } from "../lib/diff";
 import { formatDateTime, formatSek } from "../lib/format";
 import { computeQuote, discountPct as volumeDiscountPct } from "../lib/pricing";
+import { approvedEmail } from "../lib/review";
 import { stageOf } from "../lib/stage";
-import type { Quote, Run } from "../lib/types";
+import type { Run, Status } from "../lib/types";
+
+type Props = {
+  run: Run;
+  changes: Change[] | null;               // vs the parent run; null when this run has no parent
+  reruns: { id: string; createdAt: string }[];
+  activeMemoryIds: string[];
+  evalCaseId: string | null;
+};
 
 const WHOLE_NUMBER = /^\d+$/;
 
@@ -28,8 +40,16 @@ function draftLinesOf(run: Run): DraftLine[] {
   });
 }
 
-// Browser only for now: decisions live in component state until the review route exists.
-export default function RunDetail({ run: savedRun }: { run: Run }) {
+async function post(url: string, body: unknown) {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const out = await res.json();
+  if (!res.ok) throw new Error(out.error ?? `Request failed (${res.status})`);
+  return out;
+}
+
+// The preview uses the same pricing and email code as the review route, so what is saved is what was shown.
+export default function RunDetail({ run: savedRun, changes, reruns, activeMemoryIds, evalCaseId }: Props) {
+  const router = useRouter();
   const [run, setRun] = useState(savedRun);
   const draftLines = draftLinesOf(savedRun);
   const [kg, setKg] = useState<Record<string, string>>(() =>
@@ -54,40 +74,29 @@ export default function RunDetail({ run: savedRun }: { run: Run }) {
         ? "Add a quantity before approving."
         : null;
 
-  const emailFor = (quote: Quote | null) =>
-    buildEmail({
-      customer: run.customer,
-      quote,
-      status: run.status,
-      questions: run.questions,
-      notInCatalog: run.extraction?.notInCatalog ?? [],
-      deliveryNote: run.extraction?.deliveryNote ?? null,
-      approved: true,
-    });
-
   const approved = run.review?.action === "approve";
   const previewing = !run.review && changed;
   const shownQuote = approved ? (run.editedQuote ?? run.quote) : previewing ? preview : run.quote;
-  const shownEmail = approved ? (run.editedEmail ?? run.email) : previewing ? emailFor(preview) : run.email;
+  const shownEmail = approved ? (run.editedEmail ?? run.email) : previewing ? approvedEmail(run, preview) : run.email;
   const differsFromAgent = shownQuote !== run.quote;
 
-  function decide({ action, reason }: Decision) {
-    const at = new Date().toISOString();
-    if (action === "reject") {
-      setRun({ ...run, review: { action, reason, at } });
-      return;
-    }
-    setRun({
-      ...run,
-      review: {
-        action, reason, at,
-        asManager: run.status === "needs_approval" || undefined,
-        discountPct: override ?? undefined,
-        editedLines: linesChanged ? lines : undefined,
-      },
-      editedQuote: changed ? preview : undefined,
-      editedEmail: changed || run.status !== "ready_for_review" ? emailFor(finalQuote) : undefined,
+  async function decide(decision: Decision) {
+    const approving = decision.action === "approve";
+    const out = await post(`/api/runs/${run.id}/review`, {
+      ...decision,
+      ...(approving && linesChanged ? { editedLines: lines } : {}),
+      ...(approving && override !== null ? { discountPct: override } : {}),
     });
+    setRun(out.run);
+    if (out.newRunId) router.push(`/runs/${out.newRunId}`);
+  }
+
+  async function markSent() {
+    setRun((await post(`/api/runs/${run.id}/sent`, {})).run);
+  }
+
+  async function addToEval(status: Status): Promise<string> {
+    return (await post(`/api/runs/${run.id}/to-eval`, { status })).id;
   }
 
   return (
@@ -105,6 +114,16 @@ export default function RunDetail({ run: savedRun }: { run: Run }) {
           <span>Prompt {run.promptVersion}</span>
           {run.fxFail && <span>FX failure simulated</span>}
           <code>{run.id}</code>
+          {run.parentId && (
+            <span>
+              Rerun of <Link href={`/runs/${run.parentId}`}>{run.parentId}</Link>
+            </span>
+          )}
+          {reruns.map((r) => (
+            <span key={r.id}>
+              Rerun as <Link href={`/runs/${r.id}`}>{r.id}</Link>
+            </span>
+          ))}
         </div>
       </div>
 
@@ -134,6 +153,12 @@ export default function RunDetail({ run: savedRun }: { run: Run }) {
           )}
         </div>
       </section>
+
+      {run.memoryUsed.length > 0 && (
+        <MemoryUsed customer={run.customer} memories={run.memoryUsed} activeIds={activeMemoryIds} />
+      )}
+
+      {run.parentId && changes && <RunChanges parentId={run.parentId} changes={changes} />}
 
       <details className="card transcript">
         <summary>
@@ -182,8 +207,11 @@ export default function RunDetail({ run: savedRun }: { run: Run }) {
         volumePct={volumeDiscountPct(preview.totalKg)}
         changed={changed}
         blocker={blocker}
+        reruns={reruns}
+        evalCaseId={evalCaseId}
         onDecide={decide}
-        onSent={() => setRun({ ...run, sentAt: new Date().toISOString() })}
+        onSent={markSent}
+        onAddToEval={addToEval}
       />
     </>
   );

@@ -3,6 +3,8 @@ import { formatSek } from "./format";
 import { APPROVAL_LIMIT_SEK } from "./pricing";
 import type { Extraction, Quote, Status } from "./types";
 
+export const STATUSES: Status[] = ["ready_for_review", "needs_approval", "needs_info"];
+
 export type StatusResult = { status: Status; reasons: string[]; questions: string[] };
 
 // Every rule that fires adds its reason; the status is the highest one that fired.

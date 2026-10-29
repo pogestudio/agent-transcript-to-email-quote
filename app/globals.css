@@ -840,6 +840,51 @@ td.r {
   margin-top: 16px;
 }
 
+.review-extra {
+  margin-top: 16px;
+}
+
+.review-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.inline-select {
+  width: auto;
+}
+
+/* Memory used */
+
+.memory-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.memory-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+}
+
+.memory-row + .memory-row {
+  border-top: 1px solid var(--border);
+}
+
+/* Changes vs parent: email lines keep their breaks */
+
+.changes td {
+  white-space: pre-line;
+}
+
 .head-actions {
   display: flex;
   align-items: center;
