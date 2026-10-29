@@ -135,6 +135,19 @@ export default function RunDetail({ run: savedRun }: { run: Run }) {
         </div>
       </section>
 
+      <details className="card transcript">
+        <summary>
+          <div className="transcript-head">
+            <span className="chevron" aria-hidden="true">
+              ▸
+            </span>
+            <h2>Transcript</h2>
+            <span className="hint">{run.transcript.trim().split("\n").length} lines</span>
+          </div>
+        </summary>
+        <pre className="email transcript-text">{run.transcript.trim()}</pre>
+      </details>
+
       <div className="two-col">
         <section className="card">
           <div className="card-head">

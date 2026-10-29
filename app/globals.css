@@ -711,6 +711,40 @@ td.r {
   overflow-wrap: anywhere;
 }
 
+/* Transcript */
+
+.transcript summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.transcript summary::-webkit-details-marker {
+  display: none;
+}
+
+.transcript-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chevron {
+  display: inline-block;
+  color: var(--text-muted);
+  transition: transform 0.15s ease;
+}
+
+.transcript[open] .chevron {
+  transform: rotate(90deg);
+}
+
+/* About 20 lines tall, then it scrolls */
+.transcript-text {
+  margin-top: 16px;
+  max-height: calc(20 * 1.6em + 32px);
+  overflow-y: auto;
+}
+
 /* Review panel */
 
 .review-grid {
