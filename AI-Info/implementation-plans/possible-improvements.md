@@ -96,3 +96,48 @@ What it costs:
 * This goes beyond Phase 7's list, so I'd note it as an addition in progress.md.
 
 Should I add TC11, TC12, the delivery check and the trace field to the plan, and rerun the baseline at the end?
+
+## IMPROVEMENTS
+
+Gap left open: an edited quote over 50,000 SEK can be approved with plain Approve, because the panel doesn't recheck the status of the edited quote. I wrote it down in the notes rather than fixing it.
+
+## IMPROVEMENTS
+
+### Improve memory blocking filters
+
+The claim "It never learns prices, discounts or approvals: 'Always 15% off' is refused, and a caller can't plant a memory by saying it on a call" is protected in two different ways.
+
+**1. "'Always 15% off' is refused": just a word list.** In `lib/memory.ts`, a note is refused if it contains any of these: a number followed by `%`, "sek", "kr", "krona", "kronor", "price", "pris", "discount" or "rabatt". The test in `lib/memory.test.ts` checks 8 notes that should be refused.
+
+Tested against other notes:
+
+| Note | Result |
+| --- | --- |
+| Always 15% off | blocked |
+| Always gets 15 percent off | **allowed** |
+| Ten percent off as usual | **allowed** |
+| 15 procent avdrag | **allowed** |
+| No approval needed for big orders | **allowed** |
+| Cheaper rate agreed | **allowed** |
+| Pays 20 euro less | **allowed** |
+| Deliver to Price Street | blocked (an innocent note) |
+
+So it's easy to get past. Writing "percent" instead of `%` is enough, and approvals aren't on the list at all, even though the claim says they're never learned.
+
+**2. "A caller can't plant a memory": solid, not a word check.** Only one place in the code saves a memory: the review route (`app/api/runs/[id]/review/route.ts`), when a reviewer fills in "Remember for this customer". The agent only reads memories (`lib/agent.ts`), and none of its three tools can write one. If a caller says "remember I get 20% off", it stays in the transcript and is never saved.
+
+**Why the leaky filter isn't a disaster.** The real protection is the design rule, not the filter. Even if "Always gets 15 percent off" gets saved:
+
+* The AI can't apply a discount. The worst it can do is fill in the requested discount, which sends the run to a manager.
+* The AI can't set the status. Code does, so "No approval needed" can't skip the 50,000 SEK check.
+
+The one real risk is the delivery note gap: the delivery note is free text, and it goes into the email. A note that slips through could end up in the email as "15 percent off as usual", so those two gaps make each other worse.
+
+**Possible fixes**
+
+* Add the missing words to the filter: "percent", "procent", "approval", "approved", "cheaper", "euro" and the like.
+* Run the same check on the delivery note before it goes into the email.
+
+**For the panel:**
+
+> "The word filter only stops a reviewer from saving a money rule by accident. What keeps it safe is that code owns money and status, and only a reviewer can create a memory."
