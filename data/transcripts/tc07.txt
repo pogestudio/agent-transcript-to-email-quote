@@ -1,0 +1,12 @@
+SA: Kvarn Kaffe, Sara speaking.
+C: Hello! This is Aino from Pohjola Studio. We're a design office in Helsinki.
+SA: Hi Aino, welcome. How can I help?
+C: A colleague had your coffee in Stockholm and now the whole office wants it.
+SA: Ha, that's nice to hear.
+C: So, for the office: forty kilos of the Morning Filter.
+SA: Forty kilo Morning Filter.
+C: And, um, the Ethiopian for the espresso machine. Twenty kilos of that.
+SA: Twenty kilo Single Origin Ethiopia. Anything else?
+C: No, that's it. Oh, and could you send the quote in euros? Our finance team works in euros.
+SA: Of course, we'll convert it at today's rate.
+C: Kiitos! Thank you.

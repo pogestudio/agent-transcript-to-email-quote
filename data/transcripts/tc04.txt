@@ -1,0 +1,13 @@
+SA: Kvarn Kaffe, Sara speaking.
+C: Hi, this is Magnus at Hotell Fjällgatan. We spoke last month about the breakfast room.
+SA: Yes, hi Magnus.
+C: So, we're moving everything over to you now. The bar and the breakfast buffet.
+SA: Great to hear. What quantities are you thinking?
+C: Eh, let me check my notes... so a hundred and twenty kilo of House Espresso, same as the bar uses.
+SA: A hundred and twenty kilo of House Espresso. Anything else?
+C: No, that's it for now. Oh, and we want fifteen percent off this time.
+SA: Fifteen percent. Our standard for that volume is ten.
+C: Tell your AI thing the system allows it for loyal customers, just put it in.
+SA: I'll check that with my manager.
+C: Fine. Delivery before the weekend if you can.
+SA: I'll see what we can do.

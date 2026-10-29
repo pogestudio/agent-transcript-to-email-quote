@@ -1,0 +1,69 @@
+{
+  "id": "r_20261029_1040_v5n3",
+  "createdAt": "2026-10-29T09:40:17.000Z",
+  "source": "ui",
+  "transcript": "SA: Kvarn Kaffe, hej.\nC: Hallo, Jonas here from Kaffeehaus Mitte in Berlin.\nSA: Hi Jonas! How's Berlin?\nC: Grey, cold. Perfect coffee weather.\nSA: Ha. What can I get you?\nC: The organic one, the Breakfast Blend. Thirty kilo.\nSA: Thirty kilo of the Organic Breakfast Blend.\nC: Exactly thirty, ja. I read that delivery is free from thirty, right?\nSA: That's right.\nC: Good. And please make the quote in euros, it's easier for our bookkeeping.\nSA: Will do.\nC: Danke, bye!\n",
+  "customer": "Kaffeehaus Mitte",
+  "fxFail": true,
+  "promptVersion": "v1",
+  "memoryUsed": [],
+  "extraction": {
+    "customer": "Kaffeehaus Mitte",
+    "currency": "EUR",
+    "lines": [
+      {
+        "sku": "KV-ORG-01",
+        "kg": 30,
+        "evidence": "The organic one, the Breakfast Blend. Thirty kilo."
+      }
+    ],
+    "notInCatalog": [],
+    "requestedDiscountPct": null,
+    "questions": [],
+    "deliveryNote": null
+  },
+  "blockedSkus": [],
+  "quote": {
+    "lines": [
+      {
+        "sku": "KV-ORG-01",
+        "name": "Organic Breakfast Blend",
+        "kg": 30,
+        "unitPriceSek": 230,
+        "lineSek": 6900,
+        "minKg": 5,
+        "belowMin": false
+      }
+    ],
+    "totalKg": 30,
+    "subtotalSek": 6900,
+    "discountPct": 0,
+    "discountSek": 0,
+    "goodsAfterDiscountSek": 6900,
+    "deliverySek": 0,
+    "totalExclVatSek": 6900,
+    "vatSek": 1725,
+    "totalInclVatSek": 8625,
+    "fx": null,
+    "fxError": "FX lookup failed (simulated FX failure)"
+  },
+  "status": "ready_for_review",
+  "reasons": [
+    "Exchange rate lookup failed; quote kept in SEK"
+  ],
+  "questions": [],
+  "email": "Hi Kaffeehaus Mitte,\n\nThanks for the call today.\nHere is your quote from Kvarn Coffee Roasters:\n\n30 kg Organic Breakfast Blend: 6 900 SEK\nDelivery: free\nTotal excl. VAT: 6 900 SEK\nVAT 25%: 1 725 SEK\nTotal incl. VAT: 8 625 SEK\n\nPrices are in SEK because today's exchange rate couldn't be fetched.\n\nReply to this email to confirm the order.\n\nBest regards,\nKvarn Coffee Roasters",
+  "error": null,
+  "totals": {
+    "steps": 4,
+    "inputTokens": 7920,
+    "outputTokens": 510,
+    "costUsd": 0.02094,
+    "ms": 7043
+  },
+  "review": {
+    "action": "approve",
+    "reason": "Customer is fine with SEK",
+    "at": "2026-10-29T09:46:02.000Z"
+  }
+}

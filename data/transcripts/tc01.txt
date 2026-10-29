@@ -1,0 +1,12 @@
+SA: Kvarn Kaffe, det är Sara.
+C: Hej Sara! It's Linnea, from Café Linnea on Södermalm.
+SA: Hi Linnea, how are things?
+C: Busy, busy. The oat milk delivery never showed up this morning, but that's another story.
+SA: Oh no. So what can I do for you today?
+C: Same as usual really. The House Espresso.
+SA: How much do you need?
+C: Twenty kilo. Tjugo. That lasts us about three weeks.
+SA: Twenty kilo of House Espresso, got it.
+C: Yes. And nothing else this time, we still have filter left.
+SA: Perfect. I'll send the quote over by email.
+C: Tack, hej hej!

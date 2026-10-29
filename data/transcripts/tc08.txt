@@ -1,0 +1,12 @@
+SA: Kvarn Kaffe, hej.
+C: Hallo, Jonas here from Kaffeehaus Mitte in Berlin.
+SA: Hi Jonas! How's Berlin?
+C: Grey, cold. Perfect coffee weather.
+SA: Ha. What can I get you?
+C: The organic one, the Breakfast Blend. Thirty kilo.
+SA: Thirty kilo of the Organic Breakfast Blend.
+C: Exactly thirty, ja. I read that delivery is free from thirty, right?
+SA: That's right.
+C: Good. And please make the quote in euros, it's easier for our bookkeeping.
+SA: Will do.
+C: Danke, bye!

@@ -30,8 +30,8 @@ The top row is one run. The boxes below are how a reviewer and the evals change 
 
 | Page | Route | Shows |
 | --- | --- | --- |
-| Review | `/` | New run (pick, upload or paste a transcript, customer name, FX-fail toggle) and the inbox of runs by status |
-| Run | `/runs/[id]` | Status and reasons, quote, email, memory used, review actions, changes vs the parent run, trace |
+| Review | `/` | New run (pick, upload or paste a transcript, customer name, FX-fail toggle) and the inbox of runs by stage |
+| Run | `/runs/[id]` | Stage, the agent's assessment (status, reasons, questions), quote, email, memory used, review panel, changes vs the parent run, trace |
 | Evals | `/evals` | Run the suite, results per case, compare prompt versions, eval gate, promote, recurring corrections |
 
 Out of scope: sending email, login and roles, speech-to-text, deployment, a database.
@@ -63,11 +63,11 @@ app/
   runs/[id]/page.tsx        Run page: quote, email, review, diff, trace
   evals/page.tsx            Evals page
   api/...                   thin route handlers (table below)
-components/                 StatusBadge, QuoteView, ReviewPanel, TraceView
+components/                 StatusBadge, StageBadge, QuoteView, RunDetail, ReviewPanel, TraceView, Inbox
 lib/
   types.ts  catalog.ts  pricing.ts  status.ts  email.ts
   assemble.ts  tools.ts  fx.ts  agent.ts  trace.ts  store.ts
-  memory.ts  evals.ts  gate.ts  diff.ts
+  memory.ts  evals.ts  gate.ts  diff.ts  stage.ts  format.ts
   *.test.ts                 unit tests next to the code
 prompts/  v1.md  v2.md  active.txt
 data/
@@ -88,7 +88,8 @@ data/
 | `POST /api/evals` | `{promptVersion, k}` → starts a batch, returns `{batch}` | 6 |
 | `GET /api/evals` | Batches, newest first | 6 |
 | `GET /api/evals/[batch]` | Results + summary (polled while running) | 6 |
-| `POST /api/runs/[id]/review` | Approve, edit, reject or re-run | 7 |
+| `POST /api/runs/[id]/review` | Approve (with any edits), reject or rerun | 7 |
+| `POST /api/runs/[id]/sent` | Mark an approved run as sent (sets `sentAt`) | 7 |
 | `POST /api/runs/[id]/to-eval` | Turn a reviewed run into a new eval case | 7 |
 | `DELETE /api/memory?customer=&id=` | Forget one memory | 7 |
 | `GET /api/prompts` | Prompt versions + the active one | 6 |
@@ -122,7 +123,8 @@ export type QuoteLine = { sku: string; name: string; kg: number; unitPriceSek: n
 export type Fx = { currency: string; rate: number; rateDate: string; fetchedAt: string; source: string };
 export type Quote = {
   lines: QuoteLine[]; totalKg: number; subtotalSek: number;
-  discountPct: 0 | 5 | 10; discountSek: number; goodsAfterDiscountSek: number;
+  discountPct: number;                    // volume tier, or a manager override
+  discountSek: number; goodsAfterDiscountSek: number;
   deliverySek: number; totalExclVatSek: number; vatSek: number; totalInclVatSek: number;
   fx: (Fx & { totalExclVat: number; totalInclVat: number }) | null;
   fxError: string | null;
@@ -130,11 +132,12 @@ export type Quote = {
 
 export type Memory = { id: string; note: string; createdAt: string; expiresAt: string; sourceRunId: string };
 export type Review = {
-  action: "approve" | "edit" | "reject" | "rerun";
-  category: "wrong_product" | "wrong_quantity" | "wrong_status" | "wrong_discount"
-          | "email_wording" | "customer_preference" | "other" | null;
-  reason: string; asManager?: boolean; remember?: string; customerAnswers?: string;
-  editedLines?: { sku: string; kg: number }[]; at: string;
+  action: "approve" | "reject" | "rerun";            // approve takes whatever the reviewer left in the panel
+  reason: string;                         // required to reject, optional to approve; never classified
+  asManager?: boolean; remember?: string; customerAnswers?: string;
+  editedLines?: { sku: string; kg: number }[];
+  discountPct?: number;                   // manager override; never stored as a memory
+  at: string;
 };
 
 export type Run = {
@@ -147,7 +150,7 @@ export type Run = {
   quote: Quote | null; status: Status; reasons: string[]; questions: string[]; email: string;
   error: string | null;
   totals: { steps: number; inputTokens: number; outputTokens: number; costUsd: number; ms: number };
-  review?: Review; editedQuote?: Quote;
+  review?: Review; editedQuote?: Quote; editedEmail?: string; sentAt?: string;
 };
 
 export type TraceEvent = { runId: string; ts: string; step: number;
@@ -174,7 +177,9 @@ export const discountPct = (kg: number) => (kg >= 100 ? 10 : kg >= 50 ? 5 : 0);
 export const deliverySek = (kg: number) => (kg >= 30 ? 0 : 250);
 
 export function priceLine(sku: string, kg: number): QuoteLine   // throws on unknown SKU or kg not a whole number >= 1
-export function computeQuote(lines: { sku: string; kg: number }[], fx: Fx | null, fxError: string | null): Quote
+export function computeQuote(lines: { sku: string; kg: number }[], fx: Fx | null, fxError: string | null,
+  discountOverridePct: number | null = null): Quote   // override: a manager's decision (Phase 7); the agent never sets it
+//   discountPct = discountOverridePct ?? discountPct(totalKg)
 //   discountSek = Math.floor((subtotal * pct + 50) / 100)   whole kronor, rounded half up, no floats
 //   deliverySek = 0 when there are no lines
 //   vatSek      = totalExclVatSek * VAT_RATE                 exact: always a multiple of 0.25
@@ -199,6 +204,22 @@ All catalog prices are whole kronor and kg are whole numbers, so every amount ex
 | FX lookup failed | no change | Exchange rate lookup failed; quote kept in SEK | none |
 | Nothing fired | ready\_for\_review | All pricing rules met | none |
 | Agent error (bad JSON, step limit) | needs\_info | Agent could not finish: {error}. See the trace | none |
+
+### Stage (`lib/stage.ts`, pure function)
+
+`Status` is the agent's verdict and the only thing the evals grade. The stage is where a run is in its life, worked out by `stageOf(run)` from the review and `sentAt`. It is never stored and never graded.
+
+| Stage | When |
+| --- | --- |
+| Sent | `sentAt` is set |
+| Ready to send | Approved, not sent yet |
+| Rejected | Rejected with a reason |
+| Replaced | A rerun produced a newer draft |
+| Needs manager | Not reviewed, status needs\_approval |
+| Waiting on customer | Not reviewed, status needs\_info |
+| To review | Not reviewed, status ready\_for\_review |
+
+The inbox shows the stage and filters by All, To do (the last three rows), Ready to send, Sent and Rejected.
 
 ### Tools (`lib/tools.ts`)
 
@@ -232,10 +253,11 @@ The whole app runs end to end on fake data, so every later phase only replaces a
 3. A fake `runAgent({ transcript, customer, fxFail, parentId? })` in `lib/agent.ts` that saves a canned Run (ready\_for\_review, one line, a short email) and a canned 3-event trace (llm, tool, end). Same signature as the real one in Phase 4.
 4. Routes for Phase 1 from the route table. `GET /api/runs/[id]` returns `children` = runs whose `parentId` is this id.
 5. Pages:
-   - `/` Review: transcript dropdown that fills a textarea, a file input that accepts any `.txt` (read it with `file.text()`), customer name, a "Simulate FX failure" checkbox, and a Run button that shows "Running…" and then opens `/runs/[id]`. Below it, the inbox: time, customer, status badge, total, reviewed state, a status filter; each row links to its run.
-   - `/runs/[id]`: status badge and reasons, `QuoteView` (lines, discount, delivery, totals, FX block), the email in a `<pre>` with a Copy button, a disabled review panel placeholder, and `TraceView`: a totals row (steps, tokens, cost, time), one row per event with input and output in `<details>`, and the raw JSONL in a last `<details>`.
+   - `/` Review: transcript dropdown that fills a textarea, a file input that accepts any `.txt` (read it with `file.text()`), customer name, a "Simulate FX failure" checkbox, and a Run button that shows "Running…" and then opens `/runs/[id]`. Below it, the inbox: time, customer, stage badge, total (the approved quote when there is one) and the stage filters; each row links to its run.
+   - `/runs/[id]`: stage badge, an "Agent's assessment" card with the status, reasons and questions, `QuoteView` (lines, discount, delivery, totals, FX block), the email in a `<pre>` with a Copy button, the review panel from Phase 7 working in the browser only (nothing saved), and `TraceView`: a totals row (steps, tokens, cost, time), one row per event with input and output in `<details>`, and the raw JSONL in a last `<details>`.
    - `/evals`: a placeholder heading. A header nav links Review and Evals.
-6. `StatusBadge`: ready\_for\_review green, needs\_approval amber, needs\_info blue.
+6. `StatusBadge`: ready\_for\_review green, needs\_approval amber, needs\_info blue. `StageBadge`: the to do stages reuse those colours, Ready to send is brown, Sent and Replaced are grey, Rejected is red.
+7. Fake runs live as JSON in `data/runs/` and `data/traces/`, one per UI state, until real runs replace them.
 
 **Unit tests:** `store.test.ts` writes and reads a run in a temp `KVARN_DATA_DIR`, and round-trips `appendJsonl` and `readJsonl`.
 
@@ -256,16 +278,17 @@ All money and status logic exists as pure, tested functions before any model is 
    - with FX: the converted totals, "1 SEK = {rate} {CUR}", the ECB rate date and the fetch time
    - on FX failure: "Prices are in SEK because today's exchange rate couldn't be fetched."
    - items we don't sell, the delivery note, and the questions as a numbered list when the status is needs\_info
-   - a sign-off. It never says a discount above the standard was granted.
+   - a sign-off. The agent's draft never says a discount above the standard was granted; only a manager's override (Phase 7) puts one in the email, labelled "Discount" instead of "Volume discount".
+   - an `approved` flag for the email built after a review: no "our sales manager will confirm" line and no open questions.
 3. Format money with one `formatSek(n)` helper based on `toLocaleString("sv-SE")`.
 4. `lib/assemble.ts`: `assemble(extraction, fx, fxError, agentError)` → `{ quote, status, reasons, questions, email, blockedSkus }`. It drops lines with `kg: null` from the quote, moves SKUs that aren't in the catalog to `blockedSkus` and into `notInCatalog` (as "{sku} (unknown code)"), then calls `computeQuote`, `decideStatus` and `buildEmail`. With no extraction it returns needs\_info with the agent error as the reason.
 5. The fake agent now passes a hardcoded TC01 Extraction through `assemble()`.
 
 **Unit tests**
 
-- `pricing.test.ts`: `priceLine` for a known SKU, an unknown SKU (throws) and Cold Brew at 8 kg (below minimum). `discountPct` at 49, 50, 99 and 100 kg; `deliverySek` at 29 and 30 kg; 5% of 15,810 SEK rounds to 791. Table-driven: `computeQuote` gives every total in the Phase 5 table. VAT and FX totals.
+- `pricing.test.ts`: `priceLine` for a known SKU, an unknown SKU (throws) and Cold Brew at 8 kg (below minimum). `discountPct` at 49, 50, 99 and 100 kg; `deliverySek` at 29 and 30 kg; 5% of 15,810 SEK rounds to 791. A manager override of 15% on 120 kg House Espresso gives 4,320 off and 24,480 SEK. Table-driven: `computeQuote` gives every total in the Phase 5 table. VAT and FX totals.
 - `status.test.ts`: one test per row of the status table. Precedence: below minimum plus over 50,000 → needs\_info with both reasons. Asked 10% on 120 kg → no approval. Exactly 50,000 → no approval; 50,001 → approval. FX failure keeps ready\_for\_review and adds its reason.
-- `email.test.ts`: TC01's email contains `formatSek(5050)` (compare with the helper, since sv-SE uses a non-breaking space); the FX block shows rate, rate date and fetch time; the FX failure sentence; numbered questions for needs\_info.
+- `email.test.ts`: TC01's email contains `formatSek(5050)` (compare with the helper, since sv-SE uses a non-breaking space); the FX block shows rate, rate date and fetch time; the FX failure sentence; numbered questions for needs\_info; an approved email has no pending manager line and no questions.
 - `assemble.test.ts`: an unknown SKU is blocked and gives needs\_info; a `kg: null` line is left out of the quote.
 
 **Deliverable:** `npm test` is green, including all 10 expected totals. The TC01 run page shows the real 5,050 SEK, ready\_for\_review and the real email.
@@ -507,28 +530,31 @@ A reviewer can approve, edit, reject or re-run any draft with a reason, and what
    - `memoriesFor(customer)` leaves out expired notes. `deleteMemory(customer, id)` forgets one. Correcting a note = delete it and add the new one.
 2. `lib/diff.ts`: `diffRuns(parent, child)` → `{ field, before, after }[]` for status, reasons, lines ("20 kg KV-ESP-01"), total excl. VAT, currency, memory used, prompt version, and the email lines added or removed.
 3. `POST /api/runs/[id]/review`:
-   - Reject and edit need a category and a reason; "Manager approve" (approving a needs\_approval run) needs a reason.
+   - Reject needs a reason. Approve takes an optional reason and approves whatever is in the panel: if the kg or the discount changed, it is an approve with changes. There is no separate edit step and reasons are never classified.
    - It appends `{ runId, ...review }` to `data/feedback.jsonl` and saves the review on the run.
    - `remember` → `addMemory`; a rejected note returns 400 with the message.
-   - `edit` → `editedQuote = computeQuote(editedLines, ...)`. Human edits go through the same pricing code as the agent's.
+   - Approve with changes → `editedQuote = computeQuote(editedLines, fx, fxError, discountPct)` and `editedEmail = buildEmail(..., approved)`. Human edits go through the same pricing code as the agent's. On a needs\_approval run the manager can set any whole discount from 0 to 100%, with no reason required; it is stored on the review and never as a memory.
+   - `POST /api/runs/[id]/sent` sets `sentAt` on an approved run. Nothing is emailed; the person sends the email from their own mail.
    - `rerun` → `runAgent` with the same customer and FX flag, `parentId` set to this run, and the transcript plus `[Customer follow-up]` and the customer's answers when given. Returns `{ newRunId }`.
-4. `ReviewPanel` on the run page: category select, reason, "Remember for this customer", a customer answers box (for needs\_info), edit lines as a JSON textarea prefilled from the quote with a recalculated preview, and the buttons Approve (labelled Manager approve for needs\_approval), Save edit, Reject and Re-run. After a review it shows the review record and an "Add to eval set" button.
+4. `ReviewPanel` on the run page, built in the browser only during Phase 1 and now saving: a kg field per line, a discount field on needs\_approval runs, one Reason box ("Enter reason for approval, edit or reject"; required to reject, optional to approve), "Remember for this customer", a customer answers box (for needs\_info), a live preview of the quote and email, and the buttons Approve (Manager approve on needs\_approval, "with changes" when edited), Reject and Rerun. After approval it shows the review record, Mark as sent and an "Add to eval set" button.
 5. Run page additions: "Memory used" with a Forget button per note, links to the parent run and any re-runs, and a "Changes vs parent" table from `diffRuns`.
 6. `POST /api/runs/[id]/to-eval` copies the transcript to `data/transcripts/fb_<id>.txt` and appends a case to `expected.json`: the lines and total from the edited quote (or the quote), the status the reviewer picks, the currency, and `"source": "feedback"`.
-7. The inbox shows the review state: approved, edited, rejected or re-run.
+7. The inbox stage now comes from saved reviews and `sentAt`.
 
 **Unit tests**
 
 - `memory.test.ts`: add and read back; a money note is rejected; an expired note is left out; delete works; the customer key ignores case and spaces.
 - `diff.test.ts`: status, line and email changes are found; two identical runs give no differences.
+- `stage.test.ts`: one test per row of the stage table.
 
 **Deliverable** (Part 2 of the brief, live in the UI)
 
 1. Run TC01 → ready\_for\_review.
-2. Re-run it with category customer\_preference, reason "Always wants Tuesday delivery" and remember "Always wants delivery on Tuesdays".
+2. Rerun it with the reason "Always wants Tuesday delivery" and remember "Always wants delivery on Tuesdays".
 3. The new run lists the memory as used, the email mentions Tuesday delivery, and "Changes vs parent" shows the email change and the memory.
 4. Run TC05 → needs\_info → answer "20 kg" → re-run → ready\_for\_review at 6,450 SEK.
 5. Reject one run with a reason; it shows in the inbox and in `feedback.jsonl`.
+6. Manager approve TC04 at 15% → 24,480 SEK and Ready to send → Mark as sent → Sent.
 
 **Understand:** what is worth remembering (stable preferences of one customer), what never is (prices, discounts, approvals), how a note is corrected or forgotten, and why only a reviewer can create one: a caller can't plant a memory by saying it on a call.
 
@@ -538,7 +564,7 @@ One failure from the baseline gets fixed with a prompt change that only goes liv
 
 **Build**
 
-1. A "Recurring corrections" panel on the Evals page: `feedback.jsonl` grouped by category, with counts and the latest reasons, next to the baseline's failing cases. This is where a correction that keeps coming back becomes visible.
+1. A "Recurring corrections" panel on the Evals page: the reasons from `feedback.jsonl` and the approved edits (the agent's draft against what was approved), newest first, next to the baseline's failing cases. Reasons are free text and never classified, so a person reads them to find what keeps coming back.
 2. `prompts/v2.md` = v1 plus one rule aimed at the most common failure. For example, if TC06 fails: "When the customer replaces a product ('instead', 'actually', 'no wait'), remove the earlier line. Only the final version of each product goes in lines."
 3. `lib/gate.ts`: `gate(baseline, candidate, targets)` → `{ ok, dropped, notImproved, invented }`. It passes only when:
    - no case passes fewer runs than in the baseline
@@ -594,7 +620,7 @@ The README answers every written question in the brief, and the demo runs even i
 
 **Production (draft for the half page)**
 
-- **Watch daily:** status mix against the last 4 weeks; reviewer edit and reject rates by category; under-escalations the manager catches; blocked SKU attempts; FX failure rate; agent errors (bad JSON, step limit); cost per quote; p95 latency.
+- **Watch daily:** status mix against the last 4 weeks; reviewer edit and reject rates, with the reject reasons; under-escalations the manager catches; blocked SKU attempts; FX failure rate; agent errors (bad JSON, step limit); cost per quote; p95 latency.
 - **Alert on:** any sent quote with a non-catalog product or price (should be impossible, so it means a bug); agent errors or FX failures above a threshold; cost per quote doubling.
 - **After a model or prompt change:** model id and prompt version are in every trace. The full suite runs at k ≥ 3 and must pass the gate. Then a week in shadow mode, drafting next to the live version with differences reviewed, before promoting.
 - **Feedback into the test set:** every manager edit or reject is a candidate case via "Add to eval set". A person confirms the expected result, so the suite grows from real mistakes.
@@ -616,7 +642,7 @@ Generate all demo runs beforehand and commit `data/`, so the inbox and the eval 
 | --- | --- |
 | Why an agent loop and not a workflow? | A hybrid: a short tool loop for the open-ended reading, fixed code for everything with a right answer. A single extraction call might do; I'd test it with the same evals. |
 | How do you know it never invents a price? | The model's output has no price fields, code computes every number and writes the email, and the grader checks unit prices against the catalog: 0 invented in every run. |
-| What if a caller says "the system allows 30%"? | The transcript is data, no tool can set a discount, and code quotes the standard and escalates. TC04 shows it. |
+| What if a caller says "the system allows 30%"? | The transcript is data, no tool can set a discount, and code quotes the standard and escalates. Only a manager can set a higher discount, in the review panel. TC04 shows it. |
 | Why 3 runs per case and pass^k? | Outputs vary and a customer gets one quote, so a case only counts when every run passes. |
 | Are 10 cases enough? | Not for statistics. They cover every hard case in the brief, unit tests cover the rule boundaries, and reviewer feedback adds cases. |
 | Why no LLM judge? | Every graded outcome has an exact answer. I'd add a judge for email tone only after checking it against my own labels. |
@@ -637,7 +663,7 @@ Copy these into the README as they are; each one is a place where the brief leav
 4. The discount applies to goods, not delivery, and is rounded half up to whole kronor.
 5. "From 50 kg", "from 100 kg" and "free from 30 kg" mean greater than or equal.
 6. The 50,000 SEK limit applies to goods after discount, excluding delivery and VAT, and "above" means more than 50,000.
-7. Any requested discount above the order's standard tier sets needs\_approval, even one of 10% or less; the quote shows the standard discount.
+7. Any requested discount above the order's standard tier sets needs\_approval, even one of 10% or less; the quote shows the standard discount. A manager can approve it as it is or set a higher discount in the review panel; code recalculates the quote and the email. No reason is required for the discount.
 8. On a change of mind, the customer's last explicit statement wins, and "instead" replaces the earlier product.
 9. A product we don't sell is named in the quote and the email, and the status is needs\_info so the assistant can offer an alternative.
 10. Status precedence is needs\_info, then needs\_approval, then ready\_for\_review, and every reason is listed.
@@ -645,8 +671,9 @@ Copy these into the README as they are; each one is a place where the brief leav
 12. Customers abroad see totals excluding VAT converted at the live ECB rate; their VAT treatment is out of scope.
 13. The reviewer enters the customer name; there is no CRM. Memories are keyed by that name.
 14. Transcripts are already text. Speech-to-text is out of scope.
-15. Nothing is sent: "Approve" marks a draft ready to send.
+15. Nothing is sent by the app. Approve marks a draft Ready to send; the person sends the email from their own mail and clicks Mark as sent.
 16. A local, single-user app: "Manager approve" is a labelled action, not a role check.
+17. A review reason is free text and never classified: required to reject, optional to approve.
 
 ## Brief coverage checklist
 
@@ -694,7 +721,7 @@ Phase 4 (the agent loop) gets the most time; the rest are 20–30 minutes each.
 2. The Promote button: edit `active.txt` by hand, but still show the gate verdict.
 3. Memory expiry: keep the Forget button.
 4. Edit lines: keep approve, reject and re-run.
-5. The recurring-corrections panel: count the categories by hand.
+5. The recurring corrections panel: read `feedback.jsonl` by hand.
 6. Live progress polling: refresh when the suite is done.
 
 **Never cut:** the pricing and status unit tests, the FX failure path, more than one run per case, one failure fixed with before and after, the trace view, and the production half page.
