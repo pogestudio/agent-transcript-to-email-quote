@@ -1,10 +1,10 @@
 # Progress
 
-Oct 29, 2026 · Sessions 1 and 2
+Oct 29, 2026 · Sessions 1 to 3
 
 ## Summary
 
-Phase 1 is done and committed (`886e341`). The UI runs end to end on a fake agent: the Run button posts to `POST /api/run`, which saves a real run and trace in `data/`. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing. Some Phase 2 code was pulled forward because the live preview needs it.
+Phases 1 and 2 are done. The UI runs end to end on a fake agent: the Run button posts to `POST /api/run`, which saves a real run and trace in `data/`. Since Phase 2, every number, the status and the email come from `assemble()`, and all money and status rules are proven by unit tests. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing.
 
 ## What was built
 
@@ -32,7 +32,7 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 
 - `lib/catalog.ts` and `lib/pricing.ts` as in the Contracts section, plus the manager discount override in `computeQuote`.
 - `lib/email.ts`: `buildEmail` with an `approved` flag.
-- Their unit tests are not written yet and stay in Phase 2. A quick script checked the numbers: 15% on 120 kg House Espresso gives 4,320 off and 24,480 SEK; the standard 10% gives 25,920 SEK; TC05 with 20 kg gives 6,450 SEK.
+- Their unit tests were written in Session 3 (see below). Before that, a quick script checked the numbers: 15% on 120 kg House Espresso gives 4,320 off and 24,480 SEK; the standard 10% gives 25,920 SEK; TC05 with 20 kg gives 6,450 SEK.
 
 ### Review flow (browser only)
 
@@ -51,6 +51,15 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - `lib/store.test.ts`: writes and reads a run, round trips `appendJsonl` and `readJsonl`, sorts runs newest first, and checks the id format.
 - `TIMELOG.md` started, drafted from file and commit times.
 
+### Session 3: Phase 2
+
+- `lib/status.ts`: `decideStatus(extraction, quote, fxError)` checks the rules in the order of the status table and adds every reason that fires. The status is the highest one: needs\_info, then needs\_approval, then ready\_for\_review.
+- `lib/assemble.ts`: `assemble(extraction, fx, fxError, agentError)` moves unknown SKUs to `blockedSkus` and into `notInCatalog` as "{sku} (unknown code)", leaves `kg: null` lines out of the quote, then calls `computeQuote`, `decideStatus` and `buildEmail`. The model's extraction saved on the run is never changed.
+- `lib/agent.ts`: the fake agent passes its TC01 extraction through `assemble()` instead of calling `computeQuote` and `buildEmail` itself.
+- Tests: `pricing.test.ts`, `status.test.ts`, `email.test.ts` and `assemble.test.ts`, 50 new tests. All 9 Phase 5 totals are in a table test; TC05 has no total and is covered in `assemble.test.ts`.
+- One email test was added beyond the plan's list: the standard tier is labelled "Volume discount" and a manager override "Discount".
+- The untracked test run `r_20261029_154130_5hr8` was deleted.
+
 ## Decisions
 
 1. **Status and stage are separate.** Status is the agent's verdict and the only thing the evals grade. The stage (To review, Needs manager, Waiting on customer, Ready to send, Sent, Rejected, Replaced) is where the run is in its life and is never graded.
@@ -60,6 +69,11 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 5. **One reason, never classified.** A single free text Reason box: required to reject, optional to approve. No categories.
 6. **The agent's draft is never overwritten.** The original quote, email and status stay as the agent produced them; a reviewer's result goes to `editedQuote` and `editedEmail`.
 7. **The Remember checkbox waits** until memory is built in Phase 7.
+8. **"No product identified"** fires only when the extraction has no lines, no items we don't sell and no model questions, so it never repeats what another reason already says.
+9. **"All pricing rules met"** only appears when nothing at all fired. An FX failure alone shows just its own reason.
+10. **Money in reasons** uses `formatSek`, for example "50 220 SEK after discount is above the 50 000 SEK limit".
+11. **No priced lines** (TC05) gives a quote with zero lines, not `null`, and the inbox shows "Not priced".
+12. **Agent error** (no extraction): the quote is `null` and the email is empty, because there is nothing to send the customer.
 
 ## Where a decision will be saved (Phase 7)
 
@@ -90,11 +104,14 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Session 1, changed: `app/layout.tsx`, `app/page.tsx`, `AI-Info/implementation-plans/build-plan.md`.
 - Session 2, new: `lib/agent.ts`, `lib/store.test.ts`, `app/api/` (five route files), `vitest.config.mts`, `TIMELOG.md`.
 - Session 2, changed: `lib/store.ts`, `components/NewRunForm.tsx`, `app/page.tsx`, `package.json`, `package-lock.json`.
+- Session 3, new: `lib/status.ts`, `lib/assemble.ts`, `lib/pricing.test.ts`, `lib/status.test.ts`, `lib/email.test.ts`, `lib/assemble.test.ts`.
+- Session 3, changed: `lib/agent.ts`, `TIMELOG.md`.
 
 ## Checks
 
 - Session 1: `tsc --noEmit` passes. Every page returns 200 on the dev server, and an unknown run id returns 404. The review panel buttons were not clicked through by Claude (no browser available) and still need a manual check.
 - Session 2: `npm test` passes (5 tests) and `tsc --noEmit` passes. Claude checked every route with curl, including the 400 and 404 cases and a `../../package.json` transcript name. The user clicked through the new run flow in the browser and confirmed it works.
+- Session 3: `npm test` passes (55 tests) and `tsc --noEmit` passes. Claude posted a TC01 run to the dev server with curl: 5,050 SEK, ready\_for\_review, the full email and a 3 event trace, and the run page returned 200. That run was deleted afterwards. The run page in the browser still needs a manual check.
 
 ## Notes
 
@@ -105,6 +122,6 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 
 ## Next
 
-- Phase 2: `lib/status.ts`, `lib/assemble.ts` and the unit tests for pricing, status, email and assemble (`pricing.ts` and `email.ts` already exist). Then the fake agent passes its TC01 extraction through `assemble()`.
-- Decide what to do with the test run `r_20261029_154130_5hr8` in `data/runs/` and `data/traces/`. It is untracked.
+- Phase 3: `lib/fx.ts` and `lib/tools.ts` with `tools.test.ts`, `fetch` mocked.
+- Phase 4: `parseExtraction` must reject kg below 1, not only fractions. Otherwise `kg: 0` from the model makes `priceLine` throw inside `assemble()`.
 - Correct the times in `TIMELOG.md`.

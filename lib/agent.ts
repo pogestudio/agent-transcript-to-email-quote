@@ -1,11 +1,11 @@
-import { buildEmail } from "./email";
-import { computeQuote } from "./pricing";
+import { assemble } from "./assemble";
+import { priceLine } from "./pricing";
 import { appendJsonl, newId, writeJson } from "./store";
 import type { Extraction, Run, TraceEvent } from "./types";
 
 export type RunInput = { transcript: string; customer: string | null; fxFail: boolean; parentId?: string };
 
-// Fake until Phase 4: every transcript gets the same TC01 answer, saved as a run with a 3 event trace.
+// Fake until Phase 4: every transcript gets the same TC01 extraction, run through the real assemble().
 const MODEL = "claude-sonnet-5-5";
 const CANNED_LINE = { sku: "KV-ESP-01", kg: 20, evidence: "Twenty kilo. Tjugo." };
 const CANNED_USAGE = { input_tokens: 1800, output_tokens: 220 };
@@ -17,8 +17,6 @@ export async function runAgent(input: RunInput): Promise<Run> {
     customer: input.customer, currency: "SEK", lines: [CANNED_LINE],
     notInCatalog: [], requestedDiscountPct: null, questions: [], deliveryNote: null,
   };
-  const quote = computeQuote([{ sku: CANNED_LINE.sku, kg: CANNED_LINE.kg }], null, null);
-  const priced = quote.lines[0];
   const totals = {
     steps: 1,
     inputTokens: CANNED_USAGE.input_tokens,
@@ -29,10 +27,8 @@ export async function runAgent(input: RunInput): Promise<Run> {
 
   const run: Run = {
     id, createdAt: new Date().toISOString(), source: "ui", ...input,
-    promptVersion: "v1", memoryUsed: [], extraction, blockedSkus: [], quote,
-    status: "ready_for_review", reasons: ["All pricing rules met"], questions: [],
-    email: buildEmail({ customer: input.customer, quote, status: "ready_for_review", questions: [],
-      notInCatalog: [], deliveryNote: null }),
+    promptVersion: "v1", memoryUsed: [], extraction,
+    ...assemble(extraction, null, null, null),
     error: null, totals,
   };
 
@@ -40,8 +36,8 @@ export async function runAgent(input: RunInput): Promise<Run> {
     ({ runId: id, ts: new Date().toISOString(), step: 1, kind, ...fields });
   const trace = [
     event("llm", { model: MODEL, usage: CANNED_USAGE, ms: CANNED_MS.llm, stopReason: "tool_use" }),
-    event("tool", { name: "price_line", input: { sku: priced.sku, kg: priced.kg }, output: priced,
-      ms: CANNED_MS.tool, isError: false }),
+    event("tool", { name: "price_line", input: { sku: CANNED_LINE.sku, kg: CANNED_LINE.kg },
+      output: priceLine(CANNED_LINE.sku, CANNED_LINE.kg), ms: CANNED_MS.tool, isError: false }),
     event("end", { status: run.status, reasons: run.reasons, totals }),
   ];
 
