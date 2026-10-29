@@ -1,0 +1,14 @@
+SA: Kvarn Kaffe, hej!
+C: Hej hej, Maja here, from Glassbaren Ven. The ice cream bar out on Ven, the island.
+SA: Oh nice, I've been there! By the harbour in Bäckviken?
+C: That's us. We're open all year now, believe it or not. Winter ice cream is a thing.
+SA: Ha, brave. What can I get you?
+C: The House Espresso, for the affogato. Twenty five kilo.
+SA: Twenty five kilo House Espresso.
+C: And, eh, we want to try a cold coffee drink with the ice cream. Your cold brew one?
+SA: The Cold Brew Blend, yes.
+C: Just eight kilo of that, to try. If people like it we'll order more in the spring.
+SA: Eight kilo Cold Brew Blend.
+C: The ferry is the tricky part, but the delivery usually works out.
+SA: It does. I'll send you the quote.
+C: Tack!

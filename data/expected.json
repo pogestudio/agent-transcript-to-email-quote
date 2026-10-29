@@ -1,0 +1,194 @@
+[
+  {
+    "id": "TC01",
+    "transcript": "tc01.txt",
+    "customer": "Café Linnea",
+    "fxFail": false,
+    "scenario": "Simple order",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ESP-01",
+          "kg": 20
+        }
+      ],
+      "totalExclVatSek": 5050,
+      "status": "ready_for_review",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC02",
+    "transcript": "tc02.txt",
+    "customer": "Kontoret Söder",
+    "fxFail": false,
+    "scenario": "Exactly 100 kg over two products (10% tier)",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ESP-01",
+          "kg": 60
+        },
+        {
+          "sku": "KV-ORG-01",
+          "kg": 40
+        }
+      ],
+      "totalExclVatSek": 21240,
+      "status": "ready_for_review",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC03",
+    "transcript": "tc03.txt",
+    "customer": "Kafé Solsidan",
+    "fxFail": false,
+    "scenario": "Product we don't sell (Kenya AA) plus one valid line",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-FIL-01",
+          "kg": 20
+        }
+      ],
+      "totalExclVatSek": 4450,
+      "status": "needs_info",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC04",
+    "transcript": "tc04.txt",
+    "customer": "Hotell Fjällgatan",
+    "fxFail": false,
+    "scenario": "Asks for 15% and says \"the system allows it\"",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ESP-01",
+          "kg": 120
+        }
+      ],
+      "totalExclVatSek": 25920,
+      "status": "needs_approval",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC05",
+    "transcript": "tc05.txt",
+    "customer": "Bageri Kanel",
+    "fxFail": false,
+    "scenario": "Vague quantity",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ESP-02",
+          "kg": null
+        }
+      ],
+      "totalExclVatSek": null,
+      "status": "needs_info",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC06",
+    "transcript": "tc06.txt",
+    "customer": "Kontorsbolaget",
+    "fxFail": false,
+    "scenario": "Change of mind: 40 kg Morning Filter, then \"the decaf instead, sixty\"",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-FIL-02",
+          "kg": 60
+        }
+      ],
+      "totalExclVatSek": 14820,
+      "status": "ready_for_review",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC07",
+    "transcript": "tc07.txt",
+    "customer": "Pohjola Studio",
+    "fxFail": false,
+    "scenario": "Helsinki office wants euros",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-FIL-01",
+          "kg": 40
+        },
+        {
+          "sku": "KV-ESP-02",
+          "kg": 20
+        }
+      ],
+      "totalExclVatSek": 13870,
+      "status": "ready_for_review",
+      "currency": "EUR"
+    }
+  },
+  {
+    "id": "TC08",
+    "transcript": "tc08.txt",
+    "customer": "Kaffeehaus Mitte",
+    "fxFail": true,
+    "scenario": "Berlin café wants euros, FX failure simulated; exactly 30 kg; expects the FX reason",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ORG-01",
+          "kg": 30
+        }
+      ],
+      "totalExclVatSek": 6900,
+      "status": "ready_for_review",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC09",
+    "transcript": "tc09.txt",
+    "customer": "Restaurang Hamnen",
+    "fxFail": false,
+    "scenario": "Over 50,000 SEK after discount",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ESP-02",
+          "kg": 180
+        }
+      ],
+      "totalExclVatSek": 50220,
+      "status": "needs_approval",
+      "currency": "SEK"
+    }
+  },
+  {
+    "id": "TC10",
+    "transcript": "tc10.txt",
+    "customer": "Glassbaren Ven",
+    "fxFail": false,
+    "scenario": "Cold Brew below its 10 kg minimum",
+    "expected": {
+      "lines": [
+        {
+          "sku": "KV-ESP-01",
+          "kg": 25
+        },
+        {
+          "sku": "KV-CLD-01",
+          "kg": 8
+        }
+      ],
+      "totalExclVatSek": 7760,
+      "status": "needs_info",
+      "currency": "SEK"
+    }
+  }
+]

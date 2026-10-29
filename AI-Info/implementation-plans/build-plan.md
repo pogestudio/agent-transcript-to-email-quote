@@ -542,6 +542,8 @@ One click runs all 10 cases 3 times and shows graded results, and every result o
 
 A run passes when lines, total, status and currency pass and invented is 0.
 
+TC08 also expects the reason "Exchange rate lookup failed; quote kept in SEK", but `expected.json` has no field for reasons and `grade` doesn't check them. A run where the model quietly switches the currency to SEK on the failure, so the reason drops out (the build day failure in Phase 4), would still pass.
+
 3. `runSuite` writes `data/evals/<batch>.json` as `{ batch, promptVersion, k, status: "running", startedAt, results: [] }`. It runs every case k times, at most 3 runs at a time, using `runAgent` with `source: "eval"`, `batch` and `caseId`. After each run it pushes `{ caseId, runId, ...grade }` and rewrites the file; at the end it sets `status: "done"`.
 4. Routes for Phase 6 from the route table. `POST /api/evals` starts `runSuite` without awaiting it and returns `{ batch }`.
 5. Evals page:
