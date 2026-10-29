@@ -40,12 +40,14 @@ export function buildEmail({ customer, quote, status, questions, notInCatalog, d
     if (quote.fxError) out.push("", "Prices are in SEK because today's exchange rate couldn't be fetched.");
   }
 
-  for (const item of notInCatalog) out.push("", `We don't sell ${item}. Would one of our other coffees work?`);
+  // When the questions are listed, they already name each item we don't sell.
+  const asking = !approved && status === "needs_info" && questions.length > 0;
+  if (!asking) for (const item of notInCatalog) out.push("", `We don't sell ${item}. Would one of our other coffees work?`);
   if (deliveryNote) out.push("", deliveryNote.replace(/[.!]?$/, "."));
 
   if (!approved && status === "needs_approval") {
     out.push("", "Our sales manager will confirm the quote shortly.");
-  } else if (!approved && status === "needs_info" && questions.length > 0) {
+  } else if (asking) {
     out.push("", "Before we can finalise the quote:");
     questions.forEach((q, i) => out.push(`${i + 1}. ${q}`));
   } else {

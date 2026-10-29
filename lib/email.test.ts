@@ -49,6 +49,15 @@ describe("buildEmail", () => {
     expect(email).toContain(`1. ${questions[0]}\n2. ${questions[1]}`);
   });
 
+  it("names an item we don't sell once, as a question while the status is needs_info", () => {
+    const notSold = "We don't sell Kenya AA. Would one of our other coffees work?";
+    const asking = { ...base, status: "needs_info" as const, questions: [notSold], notInCatalog: ["Kenya AA"],
+      quote: computeQuote([{ sku: "KV-FIL-01", kg: 20 }], null, null) };
+    expect(buildEmail(asking).split(notSold)).toHaveLength(2);
+    expect(buildEmail(asking)).toContain(`1. ${notSold}`);
+    expect(buildEmail({ ...asking, approved: true }).split(notSold)).toHaveLength(2);
+  });
+
   it("an approved email has no pending manager line and no questions", () => {
     const pending = { ...base, status: "needs_approval" as const, quote: computeQuote(TC04, null, null) };
     expect(buildEmail(pending)).toContain("Our sales manager will confirm");
