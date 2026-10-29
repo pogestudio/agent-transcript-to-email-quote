@@ -1,10 +1,10 @@
 # Progress
 
-Oct 29, 2026 · Sessions 1 to 3
+Oct 29, 2026 · Sessions 1 to 4
 
 ## Summary
 
-Phases 1 and 2 are done. The UI runs end to end on a fake agent: the Run button posts to `POST /api/run`, which saves a real run and trace in `data/`. Since Phase 2, every number, the status and the email come from `assemble()`, and all money and status rules are proven by unit tests. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing.
+Phases 1 to 3 are done. The UI runs end to end on a fake agent: the Run button posts to `POST /api/run`, which saves a real run and trace in `data/`. Since Phase 2, every number, the status and the email come from `assemble()`, and all money and status rules are proven by unit tests. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing. Since Phase 3, the three tools and the live FX lookup exist as tested library code, but nothing calls them until the real agent arrives in Phase 4.
 
 ## What was built
 
@@ -60,6 +60,14 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - One email test was added beyond the plan's list: the standard tier is labelled "Volume discount" and a manager override "Discount".
 - The untracked test run `r_20261029_154130_5hr8` was deleted.
 
+### Session 4: Phase 3
+
+- `lib/fx.ts`: `getRate(currency, ctx)` calls Frankfurter with a 5 second timeout and returns `{ ok: true, currency, rate, rateDate, fetchedAt, source }` or `{ ok: false, error }`. It uppercases the code and only accepts 3 letters before building the URL. `fxFail` fails on purpose without a fetch. The result is cached per currency in `ctx.fxCache`, failures included.
+- `lib/tools.ts`: `TOOL_SCHEMAS` as in Contracts, `searchProducts(query)` and `makeTools(ctx)` → `{ call(name, input) }`. `call` checks the input types, returns `{ error }` for an unknown tool or bad input, and wraps everything in `try/catch`, so it never throws.
+- `search_products` matches whole words of the query against the product name and keywords, ignoring case and punctuation, and returns `{ sku, name, minKg }[]` in catalog order.
+- `convert_currency` returns `{ ok: true, currency: "SEK", amount, rate: 1 }` for SEK without a lookup. For other codes it returns the plan's shape plus `currency`, with the amount rounded to 2 decimals like the quote.
+- `lib/tools.test.ts`: the 12 tests the plan lists, plus 3 extras the user picked: a valid `price_line`, an unknown tool name and a missing `query`. A fourth extra (an invalid code like "EURO" never reaches `fetch`) was dropped; the check is in the code and was verified live instead.
+
 ## Decisions
 
 1. **Status and stage are separate.** Status is the agent's verdict and the only thing the evals grade. The stage (To review, Needs manager, Waiting on customer, Ready to send, Sent, Rejected, Replaced) is where the run is in its life and is never graded.
@@ -74,6 +82,9 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 10. **Money in reasons** uses `formatSek`, for example "50 220 SEK after discount is above the 50 000 SEK limit".
 11. **No priced lines** (TC05) gives a quote with zero lines, not `null`, and the inbox shows "Not priced".
 12. **Agent error** (no extraction): the quote is `null` and the email is empty, because there is nothing to send the customer.
+13. **A failed rate lookup is cached for the run.** Each run does at most one lookup per currency, so the quote always uses the same result the model saw. A new run tries again.
+14. **The currency code is checked before it goes into the URL.** It comes from the model, so only 3 letters ever reach Frankfurter.
+15. **Search uses whole words.** "Kenya AA" finds nothing instead of matching on "aa". "morning filter" returns both filters, and the model picks by name.
 
 ## Where a decision will be saved (Phase 7)
 
@@ -106,12 +117,22 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Session 2, changed: `lib/store.ts`, `components/NewRunForm.tsx`, `app/page.tsx`, `package.json`, `package-lock.json`.
 - Session 3, new: `lib/status.ts`, `lib/assemble.ts`, `lib/pricing.test.ts`, `lib/status.test.ts`, `lib/email.test.ts`, `lib/assemble.test.ts`.
 - Session 3, changed: `lib/agent.ts`, `TIMELOG.md`.
+- Session 4, new: `lib/fx.ts`, `lib/tools.ts`, `lib/tools.test.ts`.
+- Session 4, changed: `TIMELOG.md`, `AI-Info/implementation-plans/progress.md`.
 
 ## Checks
 
 - Session 1: `tsc --noEmit` passes. Every page returns 200 on the dev server, and an unknown run id returns 404. The review panel buttons were not clicked through by Claude (no browser available) and still need a manual check.
 - Session 2: `npm test` passes (5 tests) and `tsc --noEmit` passes. Claude checked every route with curl, including the 400 and 404 cases and a `../../package.json` transcript name. The user clicked through the new run flow in the browser and confirmed it works.
 - Session 3: `npm test` passes (55 tests) and `tsc --noEmit` passes. Claude posted a TC01 run to the dev server with curl: 5,050 SEK, ready\_for\_review, the full email and a 3 event trace, and the run page returned 200. That run was deleted afterwards. The run page in the browser still needs a manual check.
+- Session 4: `npm test` passes (70 tests) and `tsc --noEmit` passes. Claude ran a live check against the real Frankfurter API from a scratch script outside the repo:
+  - TC07's 13,870 SEK became 1,260.96 EUR at 0.090913 (rate date 2026-10-29), and NOK worked too.
+  - A second EUR call in the same run made no fetch.
+  - "XYZ" got HTTP 404 and failed closed, and the cached failure made no second fetch.
+  - "EURO" and "EUR&base=USD" were refused without a fetch, and `fxFail` failed without one.
+  - Ten realistic search phrases returned the expected SKUs.
+  
+  Nothing is visible in the UI yet.
 
 ## Notes
 
@@ -119,9 +140,12 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - After an `npm install` or big edits, the browser can keep running old client code. We saw "Cannot read properties of undefined (reading 'find')" from the removed `fakeRuns` code; restarting the dev server fixed it.
 - Vitest prints that `vite-tsconfig-paths` is no longer needed. The project has no path aliases, so it could be dropped for `resolve.tsconfigPaths: true`. Kept because the plan lists it.
 - `.env` defines `ANTHROPIC_AGENT_API_KEY`, but `new Anthropic()` reads `ANTHROPIC_API_KEY`. Fix before Phase 4.
+- Frankfurter answers a known code in about 0.15 s, but its 404 for an unknown code takes 0.3 to 2.3 s on its side. In the first live run every call hit the 5 second timeout and failed closed as designed. It did not happen again in four more runs. The demo runs are generated beforehand anyway (Phase 9).
+- A successful `getRate` result includes `ok: true`. Passed straight to `computeQuote` as `Fx`, it would end up stored in `quote.fx`.
 
 ## Next
 
-- Phase 3: `lib/fx.ts` and `lib/tools.ts` with `tools.test.ts`, `fetch` mocked.
+- Phase 4: `prompts/`, `lib/trace.ts`, `parseExtraction` and the real `runAgent`, with `agent.test.ts` and `trace.test.ts`.
+- Phase 4: remove `ok` from the `getRate` result before it goes into `assemble()`.
 - Phase 4: `parseExtraction` must reject kg below 1, not only fractions. Otherwise `kg: 0` from the model makes `priceLine` throw inside `assemble()`.
 - Correct the times in `TIMELOG.md`.
