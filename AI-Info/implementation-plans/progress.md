@@ -1,10 +1,10 @@
 # Progress
 
-Oct 29, 2026 · Session 1
+Oct 29, 2026 · Sessions 1 and 2
 
 ## Summary
 
-The Phase 1 UI runs on fake JSON data. The review flow (manager discount, stages, Mark as sent) works in the browser only and saves nothing. Some Phase 2 code was pulled forward because the live preview needs it. Nothing is committed yet.
+Phase 1 is done and committed (`886e341`). The UI runs end to end on a fake agent: the Run button posts to `POST /api/run`, which saves a real run and trace in `data/`. The review flow (manager discount, stages, Mark as sent) still works in the browser only and saves nothing. Some Phase 2 code was pulled forward because the live preview needs it.
 
 ## What was built
 
@@ -13,7 +13,7 @@ The Phase 1 UI runs on fake JSON data. The review flow (manager discount, stages
 - `/` Review: new run form (transcript dropdown, `.txt` upload, textarea, customer name, "Simulate FX failure", Run) and the inbox with stage badges, totals and the filters All, To do, Ready to send, Sent, Rejected.
 - `/runs/[id]`: header with the stage, an "Agent's assessment" card (status, reasons, questions), the quote, the email with Copy, the review panel and the trace (totals row, one expandable row per event with input and output, raw JSONL).
 - `/evals`: placeholder. Header nav links Review and Evals.
-- The Run button is fake: it opens the saved run for the picked transcript, or the newest run, until `POST /api/run` exists.
+- The Run button posts to `POST /api/run` and opens the new run (Session 2). In Session 1 it opened a saved fake run.
 - Styling is plain CSS in `app/globals.css` with colour variables at the top. Tailwind is not installed.
 
 ### Fake data (to be replaced by real runs)
@@ -40,6 +40,16 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 - Review panel: a kg field per line, a discount field on needs\_approval runs, one Reason box ("Enter reason for approval, edit or reject"), and a live preview of the quote and the email.
 - Buttons: Approve (Manager approve on needs\_approval, "with changes" when edited), Reject, Rerun (disabled until the real agent exists) and, after approval, Mark as sent.
 - A refresh resets the page. Saving arrives with the review route in Phase 7.
+
+### Session 2: the rest of Phase 1
+
+- Setup: `@anthropic-ai/sdk`, `vitest` and `vite-tsconfig-paths` installed, `vitest.config.mts` added, and `npm test` runs `vitest run`.
+- `lib/store.ts`: reads `KVARN_DATA_DIR` on every call, so tests can point it at a temp folder. New: `newId()`, `writeJson`, `appendJsonl`, `listRuns(source?)` (newest first) and `readTranscript(name)` (only plain `.txt` names, so no path tricks).
+- `lib/agent.ts`: a fake `runAgent({ transcript, customer, fxFail, parentId? })`. Every transcript gets the TC01 answer (20 kg House Espresso, 5,050 SEK, ready\_for\_review), built with the real `computeQuote` and `buildEmail`, plus a 3 event trace (llm, tool `price_line`, end). The FX checkbox is saved on the run but has no effect yet.
+- Routes: `GET /api/transcripts`, `GET /api/transcripts/[name]`, `POST /api/run` (400 on an empty transcript), `GET /api/runs?source=` (400 on an unknown source) and `GET /api/runs/[id]` (`{run, trace, children}`, 404 when missing).
+- `NewRunForm` posts to `/api/run`, opens the new run, and shows the error under the form when it fails. `app/page.tsx` uses `listRuns("ui")`.
+- `lib/store.test.ts`: writes and reads a run, round trips `appendJsonl` and `readJsonl`, sorts runs newest first, and checks the id format.
+- `TIMELOG.md` started, drafted from file and commit times.
 
 ## Decisions
 
@@ -76,17 +86,25 @@ Five transcripts in `data/transcripts/`, five runs in `data/runs/` and five trac
 
 ## Files
 
-- New: `lib/types.ts`, `lib/store.ts`, `lib/format.ts`, `lib/catalog.ts`, `lib/pricing.ts`, `lib/email.ts`, `lib/stage.ts`, `components/` (NavLink, StatusBadge, StageBadge, Inbox, NewRunForm, QuoteView, RunDetail, ReviewPanel, CopyButton, TraceView), `app/globals.css`, `app/runs/[id]/page.tsx`, `app/evals/page.tsx`, `data/`.
-- Changed: `app/layout.tsx`, `app/page.tsx`, `AI-Info/implementation-plans/build-plan.md`.
+- Session 1, new: `lib/types.ts`, `lib/store.ts`, `lib/format.ts`, `lib/catalog.ts`, `lib/pricing.ts`, `lib/email.ts`, `lib/stage.ts`, `components/` (NavLink, StatusBadge, StageBadge, Inbox, NewRunForm, QuoteView, RunDetail, ReviewPanel, CopyButton, TraceView), `app/globals.css`, `app/runs/[id]/page.tsx`, `app/evals/page.tsx`, `data/`.
+- Session 1, changed: `app/layout.tsx`, `app/page.tsx`, `AI-Info/implementation-plans/build-plan.md`.
+- Session 2, new: `lib/agent.ts`, `lib/store.test.ts`, `app/api/` (five route files), `vitest.config.mts`, `TIMELOG.md`.
+- Session 2, changed: `lib/store.ts`, `components/NewRunForm.tsx`, `app/page.tsx`, `package.json`, `package-lock.json`.
 
 ## Checks
 
-- `tsc --noEmit` passes. Every page returns 200 on the dev server, and an unknown run id returns 404.
-- The buttons were not clicked through by Claude (no browser available); they need a manual check.
+- Session 1: `tsc --noEmit` passes. Every page returns 200 on the dev server, and an unknown run id returns 404. The review panel buttons were not clicked through by Claude (no browser available) and still need a manual check.
+- Session 2: `npm test` passes (5 tests) and `tsc --noEmit` passes. Claude checked every route with curl, including the 400 and 404 cases and a `../../package.json` transcript name. The user clicked through the new run flow in the browser and confirmed it works.
+
+## Notes
+
+- Next allows one `next dev` per project folder. A second one exits with "Another next dev server is already running".
+- After an `npm install` or big edits, the browser can keep running old client code. We saw "Cannot read properties of undefined (reading 'find')" from the removed `fakeRuns` code; restarting the dev server fixed it.
+- Vitest prints that `vite-tsconfig-paths` is no longer needed. The project has no path aliases, so it could be dropped for `resolve.tsconfigPaths: true`. Kept because the plan lists it.
+- `.env` defines `ANTHROPIC_AGENT_API_KEY`, but `new Anthropic()` reads `ANTHROPIC_API_KEY`. Fix before Phase 4.
 
 ## Next
 
-- The rest of Phase 1: the API routes (`/api/transcripts`, `/api/run`, `/api/runs`), the fake `runAgent`, Vitest setup with `store.test.ts`, and the Run button posting to `/api/run`.
-- Phase 2: `status.ts`, `assemble.ts` and the unit tests for pricing, status, email and assemble.
-- `TIMELOG.md` (plan rule 5) is not started.
-- Commit when you are happy with the UI.
+- Phase 2: `lib/status.ts`, `lib/assemble.ts` and the unit tests for pricing, status, email and assemble (`pricing.ts` and `email.ts` already exist). Then the fake agent passes its TC01 extraction through `assemble()`.
+- Decide what to do with the test run `r_20261029_154130_5hr8` in `data/runs/` and `data/traces/`. It is untracked.
+- Correct the times in `TIMELOG.md`.
